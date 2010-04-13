@@ -1,4 +1,4 @@
-function [CanKick, Fifo, BallTrajBackup, PlayerTrajBackup] = canKick( MinKickVel, MaxKickVel, Player, Target, BallPos, TeamCounter, agentIndex);
+function [CanKick, Fifo, BallTrajBackup, PlayerTrajBackup] = canKick( MinKickVel, MaxKickVel, Player, Target, BallPos, TeamCounter, agentIndex, GameMode);
 %CANKICK Generates a set of control signals for the provided player
 % and determines whether that player is able to perform a kick from
 % their current location on the field.
@@ -35,6 +35,8 @@ function [CanKick, Fifo, BallTrajBackup, PlayerTrajBackup] = canKick( MinKickVel
 % BallPos:             This is the ball's position and velocity.
 % TeamCounter:         This is the team number of the current player.
 % agentIndex:          This is the agent number of the current player.
+% GameMode:            This is the GameMode variable passed from the
+%                      simulator. 
 
 
 global FUN
@@ -51,3 +53,5 @@ if isempty(Fifo)
 else
   CanKick = 1;
 end
+
+Fifo = FUN.U_TimeStamp(Fifo, GameMode(1));	

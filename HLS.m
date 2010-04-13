@@ -184,7 +184,7 @@ if ~isPlayerEngaging
   MaxKickVel = 1.6;
 
   %-% See if the chosen player is able to engage the ball.
-  [canKick, FifoTemp, BallTrajBackup, PlayerTrajBackup]=FUN.canKick(MinKickVel, MaxKickVel, TeamOwn{engagingPlayer}, [xVal,yVal], Ball.Pos, TeamCounter, engagingPlayer);
+  [canKick, FifoTemp, BallTrajBackup, PlayerTrajBackup]=FUN.canKick(MinKickVel, MaxKickVel, TeamOwn{engagingPlayer}, [xVal,yVal], Ball.Pos, TeamCounter, engagingPlayer, GameMode);
 
   %-% If the player can kick, we tell them to. If not, we tell them to chase the ball.
   if canKick
