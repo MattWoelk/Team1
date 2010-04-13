@@ -14,7 +14,7 @@ global CycleBatch
 global qDampRec qDampMRec qDampLogRec
 
 %=% We want to remember the previous queued up commands
-persistent Fifo kickoff
+persistent Fifo kickoff BallPrediction
 
 if isempty(kickoff)
   kickoff = true;
@@ -35,13 +35,15 @@ if GameMode(1) == 0
     %%%%%%%%%%%%%%%%%(::  The initialisation of players' parameters  ::)%%%%%%%%%%%%%%%%%
     Fifo = cell(1,M);
 
-    TeamOwnSave = TeamOwn;                      % TeamOwnSave: we store the state infos of the robots here
-    TeamOppSave = TeamOpp;                      % TeamOppSave: we store it here the adversary
-
     %=% These lines are needed to run the tactical planner
     qDampRec = 1 / qDamp;
     qDampMRec = 1 / (1 - qDamp);
     qDampLogRec = 1 / log(qDamp);
+
+    %=% This initializes the ball prediction variable
+    for i = 1:10
+      BallPrediction(i, 1:4) = [FieldX/2, FieldY/2, 0, 0];
+    end
 
 end
 
@@ -67,6 +69,11 @@ if GameMode(2) == 2                     % 2:positioning manner of playing
 
     kickoff = true;
 
+    %=% This initializes the ball prediction variable
+    for i=1:10
+        BallPrediction(i, 1:4) = [FieldX/2, FieldY/2, 0, 0];
+    end
+
     return
 end
 
@@ -86,8 +93,6 @@ matrix = FUN.BallPrediction(Ball,20);
 
 
 
-
-DesiredSpeedTime = 1;
 
 persistent isPlayerEngaging %-% tells whether a player is currently in the process of kicking the ball.
 if isempty(isPlayerEngaging)
@@ -118,14 +123,16 @@ if isempty(PlayerTrajBackup)
   PlayerTrajBackup = [];
 end
 
-%$ NB: Determine whether or not we have possession:
-%$ -
-%$ isStrightLine = FUN.IsBallGoingInStraightLine(Ball);
-%-%if ~stateChange
-%-%  display('HIT');
-%-%else
-%-%  display('--');
-%-%end
+%-% Determine whether or not we have possession:
+threshold = 0.2;
+if norm(Ball.Pos(1:2) - BallPrediction(10,1:2)) > threshold || ...
+    norm(Ball.Pos(3:4) - BallPrediction(10,3:4)) > threshold
+  BallInterrupted = true; %-% An opponent (or a goalpost) has contacted the ball.
+  %-%disp('Ball interrupted');
+else
+  BallInterrupted = false;
+  %-%disp('Ball as planned');
+end
 
 %-% NB: What we REALLY want is players to be able to set up shots. So one player would be setting up to kick a ball that ball didn't even have the trajectory yet. Though having the player just moving to the right spot might be just the same. On that note: I'm going to make it calculate where to pass the ball based on where the players are moving to, rather than where they currently are.
 
@@ -138,6 +145,20 @@ isPlayerEngaging = FUN.isKicking(Fifo{engagingPlayer});
 
 %-% Where to pass to:
 %-% We may want to change this to not include the kicker.
+
+if isPlayerEngaging
+  %-% if kick is not interrupted, tell the engaging player to continue its kick.
+  if ~BallInterrupted
+    [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( Fifo{engagingPlayer}, TeamCounter, engagingPlayer, GameMode);
+    hasPossession = true;
+  else
+    Fifo{engagingPlayer} = [];
+    BallTraj{TeamCounter} = [-1 -1];
+
+    hasPossession = false;
+    isPlayerEngaging = false;
+  end
+end
 
 if ~isPlayerEngaging
   %%^&%disp('no one is engaging');
@@ -167,8 +188,6 @@ if ~isPlayerEngaging
 
   %-% If the player can kick, we tell them to. If not, we tell them to chase the ball.
   if canKick
-    %%^&%disp('canKick!!');
-    
     %Display Values:
     %figure(4);
     %imshow(flipud(matrixKick));
@@ -186,12 +205,6 @@ if ~isPlayerEngaging
     [ControlSignal{engagingPlayer}, garbage] = FUN.GoHere(Fifo{engagingPlayer}, engagingPlayer, [Ball.Pos(1),Ball.Pos(2)],TeamOwn, GameMode, CycleBatch, TeamCounter);
     %$ Change State????(set state?)
   end
-else
-  %%^&%disp('someone is engaging');
-  %-% Tell the engaging player to continue its kick.
-  [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( Fifo{engagingPlayer}, TeamCounter, engagingPlayer, GameMode);
-  %$ Change State????(set state?)
-  hasPossession = true;
 end
 
 
@@ -244,4 +257,5 @@ garbage = []; %-% Do not use the Fifo that GoHere gives us.
 
 
 
+BallPrediction = FUN.BallPrediction(Ball,10); 
 %-% when engagingPlayer is within 10, calculate matrices.

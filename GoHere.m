@@ -15,14 +15,3 @@ FifoForPlayer = FUN.U_TimeStamp(CS, GameMode(1));  %add timestamps to controlsig
 HLSTraj{TeamCounter}{agentIndex}.data  = TeamOwn{agentIndex}.Target;
 HLSTraj{TeamCounter}{agentIndex}.tst   = TeamOwn{agentIndex}.TargetSpeedTime;
 HLSTraj{TeamCounter}{agentIndex}.index = 1;
-
-
-
-
-
-
-
-
-
-
-
