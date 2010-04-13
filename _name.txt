@@ -1,0 +1,3 @@
+./AntonFinal3/fake.txt
+
+WORKING COPY

@@ -1,0 +1,5 @@
+IDEAS:
+
+Check to see if any of our players can get to the ball first, if not, perhaps play defensively
+
+Passing plays: agent 1 knows that agent 2 will have ball control, so he goes toward the goal in anticipation of a pass

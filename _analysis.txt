@@ -1,0 +1,51 @@
+BestTarget.m                % called by HLS.m
+  DefineAngleZone.m             % never called
+DefineApproach.m            % called by haromszog
+DefineApproachSequence.m    % called by haromszog
+DefineCornerPoints.m        % called by haromszog
+DefineSector.m              % called by haromszog
+DefineVelocity.m            % called by haromszog
+DistanceToLine.m            % called by Reacheable
+Formation.fis               % called by HLS
+  GenerateDistanceMesh.m        % never called
+Goalie.m                    % called by HLS
+HLS.m                       % STARTS everything
+  HLS_INIT.m                    % never called
+HLS_SetUp.m                 % called by HLS
+INIT_Team.m                 % called by simulator (Create_Team)
+INIT_Test_Robots_Common.m   % called by INIT_Team
+KickOut.m                   % called by HLS
+  PlotGridAndPoles.m            % never called
+Reacheable.m                % called by HLS
+  Soccer.m                      % unimportant
+TP_CollisionDetails.m       % called by TP_Kick and TP_SolveCollision
+TP_HARD.m                   % called by HLS and HLS_SetUp
+TP_Kick.m                   % called by KickOut
+TP_SolveCollision.m         % called by TP_TimeIter
+TP_TimeIter.m               % called by TP_Kick
+  blockBall.m                   % never called
+  egyenletproba.m               % this is a script that does not and is not called
+eval_ss.m                   % called by BestTarget
+haromszog.m                 % called by HLS
+isOnTheWay.m                % called by HLS
+mirror2.m                   % called by blockBall and haromszog
+  mirror4.m                     % never called
+moveTo.m                    % called by HLS
+
+
+
+HOW CONTROL SIGNALLING WORKS:
+
+CS0=zeros(CycleBatch,2);
+DesiredSpeedTime=1;
+TeamOwn{index}.Target = [tox toy, facingx facingy];
+[CS,TeamOwn{agentIndex}.Target,TeamOwn{agentIndex}.TargetSpeedTime]=FUN.moveTo(agentIndex,TeamOwn,DesiredSpeedTime);
+
+where in moveTo:
+function [ControlSignal,Target,Time]=moveTo(index,TeamOwn,DesiredSpeedTime)
+  AND
+[ControlSignal, useless] = FUN.Get_Control_Signal(TeamOwn{index}.Pos, TeamOwn{index}.Target, TeamOwn{index}.Type, DesiredSpeedTime);
+  WHILE
+DesiredSpeedTime=1; for whatever reason
+
+HLS returns ControlSignal, which makes stuff happen.
