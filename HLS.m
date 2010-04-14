@@ -32,7 +32,7 @@ qDamp  = 1-Environment.BallDampingFactor;
 %%%%%%%%%%%%%%%%(::  The filling of team data/assigning  ::)%%%%%%%%%%%%%%%
 if GameMode(1) == 0
 
-    %%%%%%%%%%%%%%%%%(::  The initialisation of players' parameters  ::)%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%(::  The initialisation of players' parameters  ::)%%%%%%%%%%%%
     Fifo = cell(1,M);
 
     %=% These lines are needed to run the tactical planner
@@ -176,7 +176,7 @@ if ~isPlayerEngaging
     %-% Maybe once a player is done kicking, we see who should be goalie.
   end
 
-  matrixPlayer = FUN.GraphPlayerPositions(TeamOwn,Ball,false,1);
+  matrixPlayer = FUN.GraphPlayerPositions(TeamOwn,Ball,true,1,engagingPlayer);
   matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow;
   [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
 
