@@ -6,15 +6,25 @@ global FUN Score
 
 global Environment Team M FieldX FieldY qDamp
 global BallTraj HLSTraj                         % is needed for drawing: the route of a ball and the robots planned trajektóriái [=.Target*]
-persistent TeamOwnSave TeamOppSave % previous Priority, Target... storing state infos
-persistent KickParam KICKANGLE
 global CycleBatch
 
 %=% These are used for the tactical planner. 
 global qDampRec qDampMRec qDampLogRec
 
 %=% We want to remember the previous queued up commands
-persistent Fifo kickoff BallPrediction
+persistent Fifo BallPrediction PlayerPrediction
+
+persistent kickoff 
+persistent isPlayerEngaging %-% tells whether a player is currently in the process of kicking the ball.
+persistent engagingPlayer %-% tells which player is currently going after the ball.
+persistent hasPossession %-% a boolean that states whether we are in possession state or not.
+persistent currentGoalie %-% the player which is currently acting as the goalie
+persistent matrixField %-% An unchanging matrix of values for the field.
+persistent BallTrajBackup %-% An unchanging matrix of values for the field.
+persistent PlayerTrajBackup %-% An unchanging matrix of values for the field.
+
+
+
 
 if isempty(kickoff)
   kickoff = true;
@@ -34,16 +44,13 @@ if GameMode(1) == 0
 
     %%%%%%%%%%%%%%%%%(::  The initialisation of players' parameters  ::)%%%%%%%%%%%%%%%%%
     Fifo = cell(1,M);
+    PlayerPrediction = cell(1,M);
 
     %=% These lines are needed to run the tactical planner
     qDampRec = 1 / qDamp;
     qDampMRec = 1 / (1 - qDamp);
     qDampLogRec = 1 / log(qDamp);
 
-    %=% This initializes the ball prediction variable
-    for i = 1:10
-      BallPrediction(i, 1:4) = [FieldX/2, FieldY/2, 0, 0];
-    end
 
 end
 
@@ -58,6 +65,7 @@ if GameMode(2) == 2                     % 2:positioning manner of playing
         ControlSignal{i} = FUN.TP_HARD( TeamOwn, TeamOpp, CycleBatch, i );
         ControlSignal{i} = [GameMode(1) + (1:CycleBatch)', ControlSignal{i}(:,:)];  % timestamps?
         Fifo{i} = [];
+        PlayerPrediction{i} = repmat([0 0 0 0], 10, 1);
     end
     %-% BallTraj is necessary to draw what the players are going to do.
     BallTraj{TeamCounter} = [-1 -1];
@@ -70,9 +78,7 @@ if GameMode(2) == 2                     % 2:positioning manner of playing
     kickoff = true;
 
     %=% This initializes the ball prediction variable
-    for i=1:10
-        BallPrediction(i, 1:4) = [FieldX/2, FieldY/2, 0, 0];
-    end
+    BallPrediction = repmat([FieldX/2, FieldY/2, 0, 0], 10, 1);
 
     return
 end
@@ -94,31 +100,24 @@ matrix = FUN.BallPrediction(Ball,20);
 
 
 
-persistent isPlayerEngaging %-% tells whether a player is currently in the process of kicking the ball.
 if isempty(isPlayerEngaging)
   isPlayerEngaging = false;
 end
-persistent engagingPlayer %-% tells which player is currently going after the ball.
 if isempty(engagingPlayer)
   engagingPlayer = 2;
 end
-persistent hasPossession %-% a boolean that states whether we are in possession state or not.
 if isempty(hasPossession)
   hasPossession = false;
 end
-persistent currentGoalie %-% the player which is currently acting as the goalie
 if isempty(currentGoalie)
   currentGoalie = 1;
 end
-persistent matrixField %-% An unchanging matrix of values for the field.
 if isempty(matrixField)
   matrixField = FUN.GraphField(false);
 end
-persistent BallTrajBackup %-% An unchanging matrix of values for the field.
 if isempty(BallTrajBackup)
   BallTrajBackup = [];
 end
-persistent PlayerTrajBackup %-% An unchanging matrix of values for the field.
 if isempty(PlayerTrajBackup)
   PlayerTrajBackup = [];
 end
@@ -134,6 +133,15 @@ else
   %-%disp('Ball as planned');
 end
 
+threshold = 0.001;
+if norm(TeamOwn{engagingPlayer}.Pos(1:2) - PlayerPrediction{engagingPlayer}(10, 1:2)) > threshold || ...
+    norm(TeamOwn{engagingPlayer}.Pos(3:4) - PlayerPrediction{engagingPlayer}(10, 3:4)) > threshold
+  %=% The engaging player has been disrupted by another player (friend or foe) or possibly run into a wall. As a result, the kick he was trying to perform will not work as expected.
+  PlayerInterrupted = true;
+else
+  PlayerInterrupted = false;
+end
+
 %-% NB: What we REALLY want is players to be able to set up shots. So one player would be setting up to kick a ball that ball didn't even have the trajectory yet. Though having the player just moving to the right spot might be just the same. On that note: I'm going to make it calculate where to pass the ball based on where the players are moving to, rather than where they currently are.
 
 matrixShadow = FUN.GraphShadows(TeamOpp,Ball,false,1);
@@ -143,12 +151,19 @@ matrixShadow = FUN.GraphShadows(TeamOpp,Ball,false,1);
 %$ set isPlayerEngaging to true if the kicker is in the process of kicking the ball.
 isPlayerEngaging = FUN.isKicking(Fifo{engagingPlayer});
 
+
+if isPlayerEngaging && PlayerInterrupted && ~size(Fifo{engagingPlayer}, 1)
+  disp(strcat('Player Interrupted', num2str(engagingPlayer)));
+  disp(TeamOwn{engagingPlayer}.Pos);
+  disp(PlayerPrediction{engagingPlayer}(10, :));
+end
+
 %-% Where to pass to:
 %-% We may want to change this to not include the kicker.
 
 if isPlayerEngaging
   %-% if kick is not interrupted, tell the engaging player to continue its kick.
-  if ~BallInterrupted
+  if ~BallInterrupted && ~PlayerInterrupted
     [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( Fifo{engagingPlayer}, TeamCounter, engagingPlayer, GameMode);
     hasPossession = true;
   else
@@ -257,5 +272,11 @@ garbage = []; %-% Do not use the Fifo that GoHere gives us.
 
 
 
+
+
+
 BallPrediction = FUN.BallPrediction(Ball,10); 
-%-% when engagingPlayer is within 10, calculate matrices.
+for i=1:M
+  PlayerPrediction{i} = FUN.PlayerPrediction( TeamOwn{i}, Fifo{i}, 10, GameMode );
+end
+%-% NB: when engagingPlayer is within 10, calculate matrices.
