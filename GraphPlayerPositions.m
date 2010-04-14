@@ -1,14 +1,14 @@
 %-% This function graphs a field where its values are dependent on the players' positions.
 
-function matrix = GraphPlayerPositions(TeamOwnSave, Ball, displayOutput, radiusMultiplier, ignorePlayer)
+function matrix = GraphPlayerPositions(TeamOwnSave, Pos, displayOutput, radiusMultiplier, ignorePlayer)
 global FUN Environment Team M FieldX FieldY qDamp
 
 ELLIPSEcircle = false; %-% Ellipse mode is not yet working properly.
 
 matrix = ones(FieldY,FieldX)*0.5;
 
-bx = Ball.Pos(1);
-by = Ball.Pos(2);
+bx = Pos(1);
+by = Pos(2);
 
 point2 = []; %-% This is the point with b distance from the opponent's position, between the opponent and the goal. It is one of the two focal points of the ellipse. (The other is the opponent's position)
              %-% It is only used for Ellipse mode.

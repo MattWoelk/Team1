@@ -1,6 +1,6 @@
 %-% This function displays shadows behind opponents, which are the areas where the ball should not be passed.
 
-function matrix = GraphShadows(TeamOppSave, Ball, displayOutput, radiusMultiplier)
+function matrix = GraphShadows(TeamOppSave, Pos, displayOutput, radiusMultiplier)
 global FUN Score
 global Environment Team M FieldX FieldY
 
@@ -16,8 +16,8 @@ drawEfficientShadowValues = true;
 
 
 if drawShadowFunction %-% This section generates a plot that shows the good and bad locations to shoot to based on the opponents' positions.
-  ballx = Ball.Pos(1);
-  bally = Ball.Pos(2);
+  ballx = Pos(1);
+  bally = Pos(2);
 
   r = 0.25; %-% The radius of the semicircle in the polar coordinate system.
   b = 0; %-% The radius of the semicircle in the Cartesian plane.
@@ -82,7 +82,7 @@ if drawShadowFunction %-% This section generates a plot that shows the good and 
     line([TeamOwnSave{1}.Pos(1) TeamOwnSave{1}.Pos(1)],[TeamOwnSave{1}.Pos(2) TeamOwnSave{1}.Pos(2)],'Marker','o','Color','red')
     line([TeamOwnSave{2}.Pos(1) TeamOwnSave{2}.Pos(1)],[TeamOwnSave{2}.Pos(2) TeamOwnSave{2}.Pos(2)],'Marker','o','Color','green')
     line([TeamOwnSave{3}.Pos(1) TeamOwnSave{3}.Pos(1)],[TeamOwnSave{3}.Pos(2) TeamOwnSave{3}.Pos(2)],'Marker','o','Color','blue')
-    line([Ball.Pos(1) Ball.Pos(1)],[Ball.Pos(2) Ball.Pos(2)],'Marker','o','Color',[0.5 0.5 0.5])
+    line([Pos(1) Pos(1)],[Pos(2) Pos(2)],'Marker','o','Color',[0.5 0.5 0.5])
     xlim([0 150]);
     ylim([0 100]);
   end
@@ -101,8 +101,8 @@ end
 
 
 if drawShadowValues %-%Calculate and display a matrix of coordinates that represent good passing spots.
-  ballx = Ball.Pos(1);
-  bally = Ball.Pos(2);
+  ballx = Pos(1);
+  bally = Pos(2);
   r = 0.25; %-% The radius of the semicircle in the polar coordinate system.
   b = 0; %-% The radius of the semicircle in the Cartesian plane.
   h = 0;  %-% h is the angle in relation to the ball. It has the range: [-pi/2,+3pi/2)
@@ -186,8 +186,8 @@ if drawEfficientShadowValues %-%Calculate and display a matrix of coordinates th
     why = [why wh];
   end
 
-  bx = Ball.Pos(1);
-  by = Ball.Pos(2);
+  bx = Pos(1);
+  by = Pos(2);
   r = 0.25; %-% The radius of the semicircle in the polar coordinate system.
   b = 0; %-% The radius of the semicircle in the Cartesian plane.
   %h = 0;  %-% h is the angle in relation to the ball. It has the range: [-pi/2,+3pi/2)

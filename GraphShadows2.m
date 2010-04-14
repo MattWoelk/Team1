@@ -1,6 +1,6 @@
 %-%This function displays shadows behind opponents, which are the areas where the ball should not be passed.
 
-function Ball = GraphShadows(TeamOppSave, Ball)
+function = GraphShadows(TeamOppSave, Pos)
 global FUN Score
 global Environment Team M FieldX FieldY qDamp
 
@@ -8,8 +8,8 @@ global Environment Team M FieldX FieldY qDamp
 drawShadowValues = true;
 
 
-bx = Ball.Pos(1);
-by = Ball.Pos(2);
+bx = Pos(1);
+by = Pos(2);
 
 if drawShadowValues %-%Calculate and display a matrix of coordinates that represent good passing spots.
   r = 0.25; %-% The radius of the semicircle in the polar coordinate system.
@@ -25,7 +25,7 @@ if drawShadowValues %-%Calculate and display a matrix of coordinates that repres
     for i = 1:ceil(FieldX/3)
       for j = 1:ceil(FieldY/3)
         %-%distance: (1) is xpos, (2) is ypos, (3) is the distance
-        distance = FUN.DistanceToLine(i*3,j*3,Ball.Pos(1),Ball.Pos(2),TeamOppSave{inc}.Pos(1),TeamOppSave{inc}.Pos(2),true);
+        distance = FUN.DistanceToLine(i*3,j*3,Pos(1),Pos(2),TeamOppSave{inc}.Pos(1),TeamOppSave{inc}.Pos(2),true);
         quant{inc}(j,i) = b > distance(3);
       end
     end
