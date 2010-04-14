@@ -92,9 +92,6 @@ end
 
 
 
-%prePos = FUN.DisplayBallPrediction(Ball,qDamp,FieldX,FieldY);
-matrix = FUN.BallPrediction(Ball,20);
-
 
 
 
@@ -126,25 +123,10 @@ if isempty(PlayerTargets)
   PlayerTargets{1} = [];
 end
 
-%-% Determine whether or not we have possession:
-threshold = 0.2;
-if norm(Ball.Pos(1:2) - BallPrediction(10,1:2)) > threshold || ...
-    norm(Ball.Pos(3:4) - BallPrediction(10,3:4)) > threshold
-  BallInterrupted = true; %-% An opponent (or a goalpost) has contacted the ball.
-  %-%disp('Ball interrupted');
-else
-  BallInterrupted = false;
-  %-%disp('Ball as planned');
-end
 
-threshold = 0.001;
-if norm(TeamOwn{engagingPlayer}.Pos(1:2) - PlayerPrediction{engagingPlayer}(10, 1:2)) > threshold || ...
-    norm(TeamOwn{engagingPlayer}.Pos(3:4) - PlayerPrediction{engagingPlayer}(10, 3:4)) > threshold
-  %=% The engaging player has been disrupted by another player (friend or foe) or possibly run into a wall. As a result, the kick he was trying to perform will not work as expected.
-  PlayerInterrupted = true;
-else
-  PlayerInterrupted = false;
-end
+
+
+
 
 %-% NB: What we REALLY want is players to be able to set up shots. So one player would be setting up to kick a ball that ball didn't even have the trajectory yet. Though having the player just moving to the right spot might be just the same. On that note: I'm going to make it calculate where to pass the ball based on where the players are moving to, rather than where they currently are.
 
@@ -157,21 +139,37 @@ matrixShadow = FUN.GraphShadows(OpponentTargets,Ball.Pos,false,1);
 
 
 %-% IN BOTH STATES, ONE PLAYER GOES AFTER THE BALL WHILE THE OTHERS POSITION THEMSELVES
+%=% States are "has possession" and "does not have possession"
 
 %-% set isPlayerEngaging to true if the kicker is in the process of kicking the ball.
 isPlayerEngaging = FUN.isKicking(Fifo{engagingPlayer});
 
 
-if isPlayerEngaging && PlayerInterrupted && ~size(Fifo{engagingPlayer}, 1)
-  disp(strcat('Player Interrupted', num2str(engagingPlayer)));
-  disp(TeamOwn{engagingPlayer}.Pos);
-  disp(PlayerPrediction{engagingPlayer}(10, :));
-end
 
 %-% Where to pass to:
 %-% We may want to change this to not include the kicker.
 
 if isPlayerEngaging
+  %-% Determine whether or not we have possession:
+  threshold = 0.8;
+  if norm(Ball.Pos(1:2) - BallPrediction(10,1:2)) > threshold || ...
+      norm(Ball.Pos(3:4) - BallPrediction(10,3:4)) > threshold
+    BallInterrupted = true; %-% An opponent (or a goalpost) has contacted the ball.
+    %-%disp('Ball interrupted');
+  else
+    BallInterrupted = false;
+    %-%disp('Ball as planned');
+  end
+
+  threshold = 0.001;
+  if norm(TeamOwn{engagingPlayer}.Pos(1:2) - PlayerPrediction{engagingPlayer}(10, 1:2)) > threshold || ...
+      norm(TeamOwn{engagingPlayer}.Pos(3:4) - PlayerPrediction{engagingPlayer}(10, 3:4)) > threshold
+    %=% The engaging player has been disrupted by another player (friend or foe) or possibly run into a wall. As a result, the kick he was trying to perform will not work as expected.
+    PlayerInterrupted = true;
+  else
+    PlayerInterrupted = false;
+  end
+
   %-% if kick is not interrupted, tell the engaging player to continue its kick.
   if ~BallInterrupted && ~PlayerInterrupted
     [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( Fifo{engagingPlayer}, TeamCounter, engagingPlayer, GameMode);
@@ -314,11 +312,17 @@ end
 
 
 
-
+%=% This establishes a prediction for the future state of the ball and any kicking player.
+%=% These values are used in the next HLS call to determine if a kick has been interrupted.
 BallPrediction = FUN.BallPrediction(Ball,10); 
 for i=1:M
   PlayerPrediction{i} = FUN.PlayerPrediction( TeamOwn{i}, Fifo{i}, 10, GameMode );
 end
+
+
+
+
+
 %-% NB: when engagingPlayer is within 10, calculate matrices.
 %-% NB: OR when engagingPlayer is more than 10 units away, keep calculating where the kick should be.
 %-% NB: EVEN BETTER would be instead of 10 units, a certain amount of cycles before ball contact.
