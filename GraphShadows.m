@@ -1,6 +1,6 @@
 %-% This function displays shadows behind opponents, which are the areas where the ball should not be passed.
 
-function matrix = GraphShadows(TeamOppSave, Pos, displayOutput, radiusMultiplier)
+function matrix = GraphShadows(PlayerPositions, Pos, displayOutput, radiusMultiplier)
 global FUN Score
 global Environment Team M FieldX FieldY
 
@@ -27,16 +27,16 @@ if drawShadowFunction %-% This section generates a plot that shows the good and 
   x = linspace(-pi,2*pi,numberOfValues); %-% x is a range of angles that will be cut down to [-pi/2,3pi/2).
 
   for i = 1:M
-    k(i) = sqrt((TeamOppSave{i}.Pos(2) - bally).^2 + (TeamOppSave{i}.Pos(1) - ballx).^2);
+    k(i) = sqrt((PlayerPositions{i}(2) - bally).^2 + (PlayerPositions{i}(1) - ballx).^2);
     b(i) = k(i).*sin(r);
-    if TeamOppSave{i}.Pos(1) - ballx >= 0
-      if TeamOppSave{i}.Pos(2) - bally == 0
+    if PlayerPositions{i}(1) - ballx >= 0
+      if PlayerPositions{i}(2) - bally == 0
         h(i) = 0;
       else
-        h(i) = asin((TeamOppSave{i}.Pos(2) - bally)/k(i)); 
+        h(i) = asin((PlayerPositions{i}(2) - bally)/k(i)); 
       end
-    elseif TeamOppSave{i}.Pos(1) - ballx < 0
-      h(i) = pi - asin((TeamOppSave{i}.Pos(2) - bally)/k(i));
+    elseif PlayerPositions{i}(1) - ballx < 0
+      h(i) = pi - asin((PlayerPositions{i}(2) - bally)/k(i));
     end
   end
 
@@ -77,11 +77,11 @@ if drawShadowFunction %-% This section generates a plot that shows the good and 
 
   if drawShadowFunctionCartesianPlayers %-% This plots the opponents, the ball, and our players on the Cartesian graph.
     for i = 1:M
-      line([TeamOppSave{i}.Pos(1) TeamOppSave{i}.Pos(1)],[TeamOppSave{i}.Pos(2) TeamOppSave{i}.Pos(2)],'Marker','o','Color','black')
+      line([PlayerPositions{i}(1) PlayerPositions{i}(1)],[PlayerPositions{i}(2) PlayerPositions{i}(2)],'Marker','o','Color','black')
     end
-    line([TeamOwnSave{1}.Pos(1) TeamOwnSave{1}.Pos(1)],[TeamOwnSave{1}.Pos(2) TeamOwnSave{1}.Pos(2)],'Marker','o','Color','red')
-    line([TeamOwnSave{2}.Pos(1) TeamOwnSave{2}.Pos(1)],[TeamOwnSave{2}.Pos(2) TeamOwnSave{2}.Pos(2)],'Marker','o','Color','green')
-    line([TeamOwnSave{3}.Pos(1) TeamOwnSave{3}.Pos(1)],[TeamOwnSave{3}.Pos(2) TeamOwnSave{3}.Pos(2)],'Marker','o','Color','blue')
+    line([TeamOwnSave{1}(1) TeamOwnSave{1}(1)],[TeamOwnSave{1}(2) TeamOwnSave{1}(2)],'Marker','o','Color','red')
+    line([TeamOwnSave{2}(1) TeamOwnSave{2}(1)],[TeamOwnSave{2}(2) TeamOwnSave{2}(2)],'Marker','o','Color','green')
+    line([TeamOwnSave{3}(1) TeamOwnSave{3}(1)],[TeamOwnSave{3}(2) TeamOwnSave{3}(2)],'Marker','o','Color','blue')
     line([Pos(1) Pos(1)],[Pos(2) Pos(2)],'Marker','o','Color',[0.5 0.5 0.5])
     xlim([0 150]);
     ylim([0 100]);
@@ -108,23 +108,23 @@ if drawShadowValues %-%Calculate and display a matrix of coordinates that repres
   h = 0;  %-% h is the angle in relation to the ball. It has the range: [-pi/2,+3pi/2)
   k = 0; %-% k is the distance from the ball to the player.
   for inc = 1:M
-    k = sqrt((TeamOppSave{inc}.Pos(2) - bally).^2 + (TeamOppSave{inc}.Pos(1) - ballx).^2);
+    k = sqrt((PlayerPositions{inc}(2) - bally).^2 + (PlayerPositions{inc}(1) - ballx).^2);
     b = k.*sin(r);
-    if TeamOppSave{inc}.Pos(1) - ballx >= 0
-      if TeamOppSave{inc}.Pos(2) - bally == 0
+    if PlayerPositions{inc}(1) - ballx >= 0
+      if PlayerPositions{inc}(2) - bally == 0
         h = 0;
       else
-        h = asin((TeamOppSave{inc}.Pos(2) - bally)/k); 
+        h = asin((PlayerPositions{inc}(2) - bally)/k); 
       end
-    elseif TeamOppSave{inc}.Pos(1) - ballx < 0
-      h = pi - asin((TeamOppSave{inc}.Pos(2) - bally)/k);
+    elseif PlayerPositions{inc}(1) - ballx < 0
+      h = pi - asin((PlayerPositions{inc}(2) - bally)/k);
     end
 
     for i = 1:2:Environment.FieldSize(1)
       for j = 1:2:Environment.FieldSize(2)
         R = sqrt((j - bally).^2 + (i - ballx).^2);
         if i - ballx >= 0
-          %%%%h) = asin((TeamOppSave{i}.Pos(2) - bally)/k(i)); 
+          %%%%h) = asin((PlayerPositions{i}(2) - bally)/k(i)); 
           theta = asin((j - bally)./R);
         elseif i - ballx == 0 && j - bally == 0
           theta = 0
@@ -133,9 +133,9 @@ if drawShadowValues %-%Calculate and display a matrix of coordinates that repres
         end
 
         %-%This is to take care of angle wrapping:
-        if j-bally<0 && i-ballx>0 && TeamOppSave{inc}.Pos(1)-ballx<0
+        if j-bally<0 && i-ballx>0 && PlayerPositions{inc}(1)-ballx<0
           h2 = h - 2*pi;
-        elseif j-bally<0 && i-ballx<0 && TeamOppSave{inc}.Pos(1)-ballx>0
+        elseif j-bally<0 && i-ballx<0 && PlayerPositions{inc}(1)-ballx>0
           h2 = h + 2*pi;
         else
           h2 = h;
@@ -193,8 +193,8 @@ if drawEfficientShadowValues %-%Calculate and display a matrix of coordinates th
   %h = 0;  %-% h is the angle in relation to the ball. It has the range: [-pi/2,+3pi/2)
   k = 0; %-% k is the distance from the ball to the player.
   for inc = 1:M
-    px = TeamOppSave{inc}.Pos(1);
-    py = TeamOppSave{inc}.Pos(2);
+    px = PlayerPositions{inc}(1);
+    py = PlayerPositions{inc}(2);
     k = FUN.Distance([bx,by],[px,py]);
     b = k.*sin(r);
 

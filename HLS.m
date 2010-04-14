@@ -122,6 +122,10 @@ persistent PlayerTrajBackup %-% An unchanging matrix of values for the field.
 if isempty(PlayerTrajBackup)
   PlayerTrajBackup = [];
 end
+persistent PlayerTargets %-% An array of where players want to go.
+if isempty(PlayerTargets)
+  PlayerTargets{1} = [];
+end
 
 %-% Determine whether or not we have possession:
 threshold = 0.2;
@@ -136,15 +140,18 @@ end
 
 %-% NB: What we REALLY want is players to be able to set up shots. So one player would be setting up to kick a ball that ball didn't even have the trajectory yet. Though having the player just moving to the right spot might be just the same. On that note: I'm going to make it calculate where to pass the ball based on where the players are moving to, rather than where they currently are.
 
-matrixShadow = FUN.GraphShadows(TeamOpp,Ball.Pos,false,1);
+for i = 1:M %-% This is just to format TeamOpp{i}.Pos to play nice with GraphShadows
+  OpponentTargets{i} = TeamOpp{i}.Pos;
+end
+matrixShadow = FUN.GraphShadows(OpponentTargets,Ball.Pos,false,1);
+
+
+
 
 %-% IN BOTH STATES, ONE PLAYER GOES AFTER THE BALL WHILE THE OTHERS POSITION THEMSELVES
 
-%$ set isPlayerEngaging to true if the kicker is in the process of kicking the ball.
+%-% set isPlayerEngaging to true if the kicker is in the process of kicking the ball.
 isPlayerEngaging = FUN.isKicking(Fifo{engagingPlayer});
-
-%-% Where to pass to:
-%-% We may want to change this to not include the kicker.
 
 if isPlayerEngaging
   %-% if kick is not interrupted, tell the engaging player to continue its kick.
@@ -157,6 +164,21 @@ if isPlayerEngaging
 
     hasPossession = false;
     isPlayerEngaging = false;
+  end
+else
+  %-% This function could be made much more intelligent as well.
+  engagingPlayer = FUN.ChooseChaser(M,Ball,TeamOwn,false); %-% figure out who should kick the ball
+
+  if kickoff
+    engagingPlayer = 3;
+    kickoff = false;
+  end
+
+  if engagingPlayer == currentGoalie
+    %-% Define a new goalie.
+    currentGoalie = FUN.ClosestToNet(M,TeamOwn,FieldY,currentGoalie);
+    %-% Define the new goal back when he's done kicking? (just a little kick-out; maybe no change needed)
+    %-% Maybe once a player is done kicking, we see who should be goalie.
   end
 end
 
@@ -180,6 +202,7 @@ if hasPossession
       %-% Send player to highPoint (coord: xVal, yVal)
       garbage = []; %-% Do not use the Fifo that GoHere gives us.
       [ControlSignal{inc}, garbage] = FUN.GoHere(Fifo{inc},inc,[xVal yVal], TeamOwn, GameMode, CycleBatch, TeamCounter);
+      PlayerTargets{inc} = [xVal yVal];
     end
   end
 else
@@ -195,6 +218,7 @@ else
       %$ Send player to highPoint (coord: xVal, yVal)
       garbage = []; %-% Do not use the Fifo that GoHere gives us.
       [ControlSignal{inc}, garbage] = FUN.GoHere(Fifo{inc},inc,[xVal yVal], TeamOwn, GameMode, CycleBatch, TeamCounter);
+      PlayerTargets{inc} = [xVal yVal];
     end
   end
 
@@ -205,23 +229,19 @@ end
 
 
 
+%-% Tell the goalie to move to an ideal spot on the field
+goalieTarget = FUN.Goalie(Ball,TeamOpp);
+garbage = []; %-% Do not use the Fifo that GoHere gives us.
+[ControlSignal{currentGoalie}, garbage] = FUN.GoHere(Fifo{currentGoalie},currentGoalie,goalieTarget,TeamOwn, GameMode, CycleBatch, TeamCounter);
+
+PlayerTargets{currentGoalie} = goalieTarget;
+
+
+
+
+
 if ~isPlayerEngaging
-  %%^&%disp('no one is engaging');
-  engagingPlayer = FUN.ChooseChaser(M,Ball,TeamOwn,false); %-% figure out who should kick the ball
-
-  if kickoff
-    engagingPlayer = 3;
-    kickoff = false;
-  end
-
-  if engagingPlayer == currentGoalie
-    %-% Define a new goalie.
-    currentGoalie = FUN.ClosestToNet(M,TeamOwn,FieldY,currentGoalie);
-    %-% Define the new goal back when he's done kicking? (just a little kick-out; maybe no change needed)
-    %-% Maybe once a player is done kicking, we see who should be goalie.
-  end
-
-  matrixPlayer = FUN.GraphPlayerPositions(TeamOwn,Ball.Pos,true,1,engagingPlayer);
+  matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
   matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow;
   [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
 
@@ -233,13 +253,13 @@ if ~isPlayerEngaging
 
   if canKick
     %-% instead of using Ball's position, use the position where the player will engage the ball.
-    timeUntilContact = FUN.timeLeftInKick(FifoTemp,GameMode)
-    engagePositionMatrix = FUN.BallPrediction(Ball,timeUntilContact,false)
-    engagePositionMatrix = flipud(engagePositionMatrix)
-    engagePosition = engagePositionMatrix(1,:)
+    timeUntilContact = FUN.timeLeftInKick(FifoTemp,GameMode);
+    engagePositionMatrix = FUN.BallPrediction(Ball,timeUntilContact,false);
+    engagePositionMatrix = flipud(engagePositionMatrix);
+    engagePosition = engagePositionMatrix(1,:);
 
-    matrixPlayer = FUN.GraphPlayerPositions(TeamOwn,engagePosition,true,1,engagingPlayer);
-    matrixShadow2 = FUN.GraphShadows(TeamOpp, engagePosition, false, 1);
+    matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,engagePosition,false,1,engagingPlayer);
+    matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 1);
     matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2;
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
 
@@ -253,10 +273,10 @@ if ~isPlayerEngaging
   %-% If the player can kick, we tell them to. If not, we tell them to chase the ball.
   if canKick
     %Display Values:
-    figure(4);
-    imshow(flipud(matrixKick));
-    figure(5);
-    imshow(flipud(highPoint));
+    %figure(4);
+    %imshow(flipud(matrixKick));
+    %figure(5);
+    %imshow(flipud(highPoint));
   
     [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( FifoTemp, TeamCounter, engagingPlayer, GameMode );
     %$ Change State????(set state?)
@@ -269,19 +289,13 @@ if ~isPlayerEngaging
     [ControlSignal{engagingPlayer}, garbage] = FUN.GoHere(Fifo{engagingPlayer}, engagingPlayer, [Ball.Pos(1),Ball.Pos(2)],TeamOwn, GameMode, CycleBatch, TeamCounter);
     %$ Change State????(set state?)
   end
+  PlayerTargets{engagingPlayer} = [];
 end
-
-
-
-
-%-% Tell the goalie to move to an ideal spot on the field
-goalieTarget = FUN.Goalie(Ball,TeamOpp);
-garbage = []; %-% Do not use the Fifo that GoHere gives us.
-[ControlSignal{currentGoalie}, garbage] = FUN.GoHere(Fifo{currentGoalie},currentGoalie,goalieTarget,TeamOwn, GameMode, CycleBatch, TeamCounter);
-
 
 
 
 BallPrediction = FUN.BallPrediction(Ball,10); 
 %-% when engagingPlayer is within 10, calculate matrices.
+%-% NB: OR when engagingPlayer is more than 10 units away, keep calculating where the kick should be.
+%-% NB: EVEN BETTER would be instead of 10 units, a certain amount of cycles before ball contact.
 %-% NB: change state when the ball is far away from our net and it's been moving away from us for a long amount of time. Change back when opponent hits the ball.

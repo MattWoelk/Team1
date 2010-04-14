@@ -1,6 +1,6 @@
 %-% This function graphs a field where its values are dependent on the players' positions.
 
-function matrix = GraphPlayerPositions(TeamOwnSave, Pos, displayOutput, radiusMultiplier, ignorePlayer)
+function matrix = GraphPlayerPositions(PlayerPositions, Pos, displayOutput, radiusMultiplier, ignorePlayer)
 global FUN Environment Team M FieldX FieldY qDamp
 
 ELLIPSEcircle = false; %-% Ellipse mode is not yet working properly.
@@ -32,8 +32,8 @@ end
 %-% For our team:
 for inc = 1:M
   if inc  ~= ignorePlayer
-    px = TeamOwnSave{inc}.Pos(1);
-    py = TeamOwnSave{inc}.Pos(2);
+    px = PlayerPositions{inc}(1);
+    py = PlayerPositions{inc}(2);
 
     r = 0.25*radiusMultiplier;
     k = FUN.Distance([bx,by],[px,py]);
