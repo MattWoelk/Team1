@@ -55,7 +55,7 @@ if GameMode(1) == 0
     BallTrajBackup = [];
     PlayerTrajBackup = [];
     PlayerTargets{1} = [];
-    matrixDontBlock = FUN.GraphDontBlock()
+    matrixDontBlock = FUN.GraphDontBlock();
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
