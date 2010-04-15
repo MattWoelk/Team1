@@ -1,10 +1,12 @@
 %-% This function maps the field in terms of the best locations to pass the ball to, not taking into account player positions, ball positions, or opponent positions.
 
-function matrix = GraphShadows(displayOutput)
+function matrix = GraphField()
 global FUN Score
 global Environment Team M FieldX FieldY
 
 matrix = zeros(FieldY,FieldX);
+
+%=% NB: Could probably replace for loops with repmat command for improved performance. Not deemed strictly necessary as this function should only be run once. See "GraphDontBlock" for example on how to replace with repmat.
 
 ecks = [];
 eck = 1:FieldX;

@@ -23,13 +23,8 @@ persistent matrixField %-% An unchanging matrix of values for the field.
 persistent BallTrajBackup %-% A backup of BallTraj
 persistent PlayerTrajBackup %-% A backup of PlayerTraj
 persistent PlayerTargets %-% An array of where players want to go.
+persistent matrixDontBlock %=% an unchanging matrix of values to keep players from blocking shots on net.
 
-
-
-
-if isempty(kickoff)
-  kickoff = true;
-end
 
 
 
@@ -43,7 +38,6 @@ qDamp  = 1-Environment.BallDampingFactor;
 %%%%%%%%%%%%%%%%(::  The filling of team data/assigning  ::)%%%%%%%%%%%%%%%
 if GameMode(1) == 0
 
-    %%%%%%%%%%%%(::  The initialisation of players' parameters  ::)%%%%%%%%%%%%
     Fifo = cell(1,M);
     PlayerPrediction = cell(1,M);
 
@@ -57,10 +51,11 @@ if GameMode(1) == 0
     engagingPlayer = 2;
     hasPossession = false;
     currentGoalie = 1;
-    matrixField = FUN.GraphField(false);
+    matrixField = FUN.GraphField();
     BallTrajBackup = [];
     PlayerTrajBackup = [];
     PlayerTargets{1} = [];
+    matrixDontBlock = FUN.GraphDontBlock()
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -74,7 +69,7 @@ if GameMode(2) == 2                     % 2:positioning manner of playing
         ControlSignal{i} = FUN.TP_HARD( TeamOwn, TeamOpp, CycleBatch, i );
         ControlSignal{i} = [GameMode(1) + (1:CycleBatch)', ControlSignal{i}(:,:)];  % timestamps?
         Fifo{i} = [];
-        PlayerPrediction{i} = repmat([0 0 0 0], 10, 1);
+        PlayerPrediction{i} = repmat(zeros(1,4), 10, 1);
     end
     %-% BallTraj is necessary to draw what the players are going to do.
     BallTraj{TeamCounter} = [-1 -1];
@@ -91,9 +86,6 @@ if GameMode(2) == 2                     % 2:positioning manner of playing
 
     return
 end
-
-
-
 
 
 
