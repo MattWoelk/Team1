@@ -20,8 +20,9 @@ persistent engagingPlayer %-% tells which player is currently going after the ba
 persistent hasPossession %-% a boolean that states whether we are in possession state or not.
 persistent currentGoalie %-% the player which is currently acting as the goalie
 persistent matrixField %-% An unchanging matrix of values for the field.
-persistent BallTrajBackup %-% An unchanging matrix of values for the field.
-persistent PlayerTrajBackup %-% An unchanging matrix of values for the field.
+persistent BallTrajBackup %-% A backup of BallTraj
+persistent PlayerTrajBackup %-% A backup of PlayerTraj
+persistent PlayerTargets %-% An array of where players want to go.
 
 
 
@@ -51,7 +52,15 @@ if GameMode(1) == 0
     qDampMRec = 1 / (1 - qDamp);
     qDampLogRec = 1 / log(qDamp);
 
-
+    %-% Initialize all our persistent variables
+    isPlayerEngaging = false;
+    engagingPlayer = 2;
+    hasPossession = false;
+    currentGoalie = 1;
+    matrixField = FUN.GraphField(false);
+    BallTrajBackup = [];
+    PlayerTrajBackup = [];
+    PlayerTargets{1} = [];
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -94,35 +103,6 @@ end
 
 
 
-if isempty(isPlayerEngaging)
-  isPlayerEngaging = false;
-end
-if isempty(engagingPlayer)
-  engagingPlayer = 2;
-end
-if isempty(hasPossession)
-  hasPossession = false;
-end
-if isempty(currentGoalie)
-  currentGoalie = 1;
-end
-if isempty(matrixField)
-  matrixField = FUN.GraphField(false);
-end
-if isempty(BallTrajBackup)
-  BallTrajBackup = [];
-end
-if isempty(PlayerTrajBackup)
-  PlayerTrajBackup = [];
-end
-persistent PlayerTargets %-% An array of where players want to go.
-if isempty(PlayerTargets)
-  PlayerTargets{1} = [];
-end
-
-
-
-
 
 
 %-% NB: What we REALLY want is players to be able to set up shots. So one player would be setting up to kick a ball that ball didn't even have the trajectory yet. Though having the player just moving to the right spot might be just the same. On that note: I'm going to make it calculate where to pass the ball based on where the players are moving to, rather than where they currently are.
@@ -130,6 +110,7 @@ end
 for i = 1:M %-% This is just to format TeamOpp{i}.Pos to play nice with GraphShadows
   OpponentTargets{i} = TeamOpp{i}.Pos;
 end
+%-% NB: We might want this to use the result from matrixShadow2 (produced for a kick) so that players go to what WILL be a good position, rather than what is currently a good position.
 matrixShadow = FUN.GraphShadows(OpponentTargets,Ball.Pos,false,1);
 
 
@@ -142,9 +123,6 @@ matrixShadow = FUN.GraphShadows(OpponentTargets,Ball.Pos,false,1);
 isPlayerEngaging = FUN.isKicking(Fifo{engagingPlayer});
 
 
-
-%-% Where to pass to:
-%-% We may want to change this to not include the kicker.
 
 if isPlayerEngaging
   %-% Determine whether or not we have possession:
@@ -179,7 +157,7 @@ if isPlayerEngaging
     isPlayerEngaging = false;
   end
 else
-  %-% This function could be made much more intelligent as well.
+  %-% NB: This function could be made much more intelligent.
   engagingPlayer = FUN.ChooseChaser(M,Ball,TeamOwn,false); %-% figure out who should kick the ball
 
   if kickoff
@@ -190,8 +168,8 @@ else
   if engagingPlayer == currentGoalie
     %-% Define a new goalie.
     currentGoalie = FUN.ClosestToNet(M,TeamOwn,FieldY,currentGoalie);
-    %-% Define the new goal back when he's done kicking? (just a little kick-out; maybe no change needed)
-    %-% Maybe once a player is done kicking, we see who should be goalie.
+    %-% NB: Set back when he's done kicking? (just a little kick-out; maybe no change needed)
+    %-% -- Maybe once a player is done kicking, we see who should be goalie.
   end
 end
 
@@ -200,17 +178,14 @@ end
 %-% Tell the players where to position themselves.
 if hasPossession
   %-% FOR PLAYERS IN POSSESSION-STATE (who aren't going for the ball)
-  %%^&%disp('  ++we have possession');
+  %-%disp('we have possession');
   for inc = 1:M
     if inc ~= engagingPlayer && inc ~= currentGoalie %-% Engaging Player is going after the ball.
-      %-% We want the radius of matrixPlayer to be independent of distance from player.
-      %-%   ...and we want to not go through other players to get somewhere.
-      %-% Currently it gets a little murky when two players are beside each other, but that's probably okay.
+      %-% NB: we want to not go through other players to get somewhere.
+      %-% Currently matrixGo gets a little murky when two players are beside each other, but that's probably okay.
       matrixPlayerGo = FUN.GraphShadowsStatic(TeamOwn,inc,false,1);
       matrixGo = matrixField.*matrixShadow.*matrixPlayerGo;
       [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixGo);
-      %-%figure(4);
-      %-%imshow(flipud(matrixGo));
 
       %-% Send player to highPoint (coord: xVal, yVal)
       garbage = []; %-% Do not use the Fifo that GoHere gives us.
@@ -220,7 +195,7 @@ if hasPossession
   end
 else
   %-% FOR PLAYERS IN NON-POSSESSION-STATE (who aren't going for the ball)
-  %%^&%disp('  oo-we dont have possession');
+  %-%disp('no possession');
   for inc = 1:M
     if inc ~= engagingPlayer && inc ~= currentGoalie
       %-% NB: We should have players go between opponents if we want to intercept passes.
@@ -234,9 +209,6 @@ else
       PlayerTargets{inc} = [xVal yVal];
     end
   end
-
-  %-%figure(4);
-  %-%imshow(flipud(matrixGoN));
 end
 
 
@@ -320,7 +292,7 @@ end
 
 
 
-%-% NB: when engagingPlayer is within 10, calculate matrices.
-%-% NB: OR when engagingPlayer is more than 10 units away, keep calculating where the kick should be.
-%-% NB: EVEN BETTER would be instead of 10 units, a certain amount of cycles before ball contact.
-%-% NB: change state when the ball is far away from our net and it's been moving away from us for a long amount of time. Change back when opponent hits the ball.
+%-% NB: When engagingPlayer is within 10, calculate matrices.
+%-% NB: -- OR when engagingPlayer is more than 10 units away, keep calculating where the kick should be.
+%-% NB: -- EVEN BETTER would be instead of 10 units, a certain amount of cycles before ball contact.
+%-% NB: Change state when the ball is far away from our net and it's been moving away from us for a long amount of time. Change back when opponent hits the ball.
