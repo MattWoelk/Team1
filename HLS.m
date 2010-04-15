@@ -92,12 +92,6 @@ end
 
 
 
-%prePos = FUN.DisplayBallPrediction(Ball,qDamp,FieldX,FieldY);
-matrix = FUN.BallPrediction(Ball,20);
-
-
-
-
 
 
 if isempty(isPlayerEngaging)
@@ -233,7 +227,7 @@ else
       matrixGoN = (1-matrixField).*matrixPlayerGo;
       [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixGoN);
 
-      %$ Send player to highPoint (coord: xVal, yVal)
+      %-% Send player to highPoint (coord: xVal, yVal)
       garbage = []; %-% Do not use the Fifo that GoHere gives us.
       [ControlSignal{inc}, garbage] = FUN.GoHere(Fifo{inc},inc,[xVal yVal], TeamOwn, GameMode, CycleBatch, TeamCounter);
       PlayerTargets{inc} = [xVal yVal];
@@ -297,15 +291,15 @@ if ~isPlayerEngaging
     %imshow(flipud(highPoint));
   
     [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( FifoTemp, TeamCounter, engagingPlayer, GameMode );
-    %$ Change State????(set state?)
+    %-% NB: Change State????(set state?)
   else
     %-% Reset the Fifo and BallTraj:
     Fifo{engagingPlayer} = [];
     BallTraj{TeamCounter} = [-1 -1];
-    %$ Run to the ball. NB: we can make this more intelligent.
+    %-% Run to the ball. NB: we can make this more intelligent.
     garbage = []; %-% Do not use the Fifo that GoHere gives us.
     [ControlSignal{engagingPlayer}, garbage] = FUN.GoHere(Fifo{engagingPlayer}, engagingPlayer, [Ball.Pos(1),Ball.Pos(2)],TeamOwn, GameMode, CycleBatch, TeamCounter);
-    %$ Change State????(set state?)
+    %-% NB: Change State????(set state?)
   end
   PlayerTargets{engagingPlayer} = [];
 end

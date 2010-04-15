@@ -4,7 +4,10 @@ global qDamp FieldX FieldY
 
 %-% Predict where the ball will be when HLS is calculated again.
 %-% Now it takes into account bounces off the wall.
-ballradius = 2;
+ballradius = 1;
+
+%-% This is a workaround to fix rebounding off top:
+ballradiustop = 1.3;
 
 matrix = zeros(cycles,4);
 
@@ -15,23 +18,23 @@ preY = Ball.Pos(2) + prevY;
 
 %-% To consider bouncing off of walls:
 if preX < (0 + ballradius)
-  %-%disp('bounce off left');
-  preX = 0 + ballradius - preX;
+  preX = 2*ballradius - preX;
+  prevX = - prevX;
 end
 
 if preX > (FieldX - ballradius)
-  %-%disp('bounce off right');
   preX = 2*(FieldX-ballradius) - preX;
+  prevX = - prevX;
 end
 
 if preY < (0 + ballradius)
-  %-%disp('bounce off bottom');
-  preY = 0 + ballradius - preY;
+  preY = 2*ballradius - preY;
+  prevY = - prevY;
 end
 
-if preY > (FieldY - ballradius)
-  %-%disp('bounce off top');
-  preY = 2*(FieldY-ballradius) - preY;
+if preY > (FieldY - ballradiustop)
+  preY = 2*(FieldY-ballradiustop) - preY;
+  prevY = - prevY;
 end
 
 matrix(1,:) = [preX preY prevX prevY];
@@ -44,26 +47,22 @@ for i = 2:cycles
 
   %-% To consider bouncing off of walls:
   if preX < (0 + ballradius)
-    %-%disp('bounce off left');
-    preX = 0 + ballradius - preX;
+    preX = 2*ballradius - preX;
     prevX = - prevX;
   end
 
   if preX > (FieldX - ballradius)
-    %-%disp('bounce off right');
     preX = 2*(FieldX-ballradius) - preX;
     prevX = - prevX;
   end
 
   if preY < (0 + ballradius)
-    %-%disp('bounce off bottom');
-    preY = 0 + ballradius - preY;
+    preY = 2*ballradius - preY;
     prevY = - prevY;
   end
 
-  if preY > (FieldY - ballradius)
-    %-%disp('bounce off top');
-    preY = 2*(FieldY-ballradius) - preY;
+  if preY > (FieldY - ballradiustop)
+    preY = 2*(FieldY-ballradiustop) - preY;
     prevY = - prevY;
   end
 
