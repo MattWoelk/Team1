@@ -1,6 +1,6 @@
 %-% This function displays shadows behind opponents, which are the areas where the players should not move.
 
-function matrix = GraphShadows(TeamOppSave, CurrentPlayer, displayOutput, radiusMultiplier)
+function matrix = GraphShadowsStatic(TeamOppSave, CurrentPlayer, displayOutput, radiusMultiplier)
 global FUN Score
 global Environment Team M FieldX FieldY
 

@@ -177,6 +177,9 @@ if hasPossession
       %-% Currently matrixGo gets a little murky when two players are beside each other, but that's probably okay.
       matrixPlayerGo = FUN.GraphShadowsStatic(TeamOwn,inc,false,1);
       matrixGo = matrixField.*matrixShadow.*matrixPlayerGo;
+      if FUN.isBallGoingForGoal(Ball)
+        matrixGo = matrixGo.*matrixDontBlock;
+      end
       [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixGo);
 
       %-% Send player to highPoint (coord: xVal, yVal)
@@ -193,6 +196,9 @@ else
       %-% NB: We should have players go between opponents if we want to intercept passes.
       matrixPlayerGo = FUN.GraphShadowsStatic(TeamOwn,inc,false,1);
       matrixGoN = (1-matrixField).*matrixPlayerGo;
+      if FUN.isBallGoingForGoal(Ball)
+        matrixGoN = matrixGoN.*matrixDontBlock;
+      end
       [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixGoN);
 
       %-% Send player to highPoint (coord: xVal, yVal)
