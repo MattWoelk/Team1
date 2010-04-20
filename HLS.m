@@ -24,6 +24,8 @@ persistent BallTrajBackup %-% A backup of BallTraj
 persistent PlayerTrajBackup %-% A backup of PlayerTraj
 persistent PlayerTargets %-% An array of where players want to go.
 persistent matrixDontBlock %=% an unchanging matrix of values to keep players from blocking shots on net.
+persistent engagePosition %-% Stores where the kicker is going to contact the ball.
+persistent canKick %-% Stores whether a player can kick the ball or not.
 
 
 
@@ -118,14 +120,17 @@ isPlayerEngaging = FUN.isKicking(Fifo{engagingPlayer});
 
 if isPlayerEngaging
   %-% Determine whether or not we have possession:
+  safeDistanceAway = false;
   threshold = 0.8;
   if norm(Ball.Pos(1:2) - BallPrediction(10,1:2)) > threshold || ...
       norm(Ball.Pos(3:4) - BallPrediction(10,3:4)) > threshold
     BallInterrupted = true; %-% An opponent (or a goalpost) has contacted the ball.
-    %-%disp('Ball interrupted');
   else
     BallInterrupted = false;
-    %-%disp('Ball as planned');
+    if Ball.Pos(3) > 0 && Ball.Pos(1) > FieldX/2
+      %-% If the ball is far away and has been moving away predictably then set hasPossession.
+      safeDistanceAway = true;
+    end
   end
 
   threshold = 0.001;
@@ -138,7 +143,7 @@ if isPlayerEngaging
   end
 
   %-% if kick is not interrupted, tell the engaging player to continue its kick.
-  if ~BallInterrupted && ~PlayerInterrupted
+  if (~BallInterrupted && ~PlayerInterrupted) || safeDistanceAway
     [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( Fifo{engagingPlayer}, TeamCounter, engagingPlayer, GameMode);
     hasPossession = true;
   else
@@ -170,7 +175,7 @@ end
 %-% Tell the players where to position themselves.
 if hasPossession
   %-% FOR PLAYERS IN POSSESSION-STATE (who aren't going for the ball)
-  %-%disp('we have possession');
+  %-%disp('have possession');
   for inc = 1:M
     if inc ~= engagingPlayer && inc ~= currentGoalie %-% Engaging Player is going after the ball.
       %-% NB: we want to not go through other players to get somewhere.
@@ -252,29 +257,46 @@ if ~isPlayerEngaging
     %-% This canKick is used to create the player's Fifo.
     [canKick, FifoTemp, BallTrajBackup, PlayerTrajBackup]=FUN.canKick(MinKickVel, MaxKickVel, TeamOwn{engagingPlayer}, [xVal,yVal], Ball.Pos, TeamCounter, engagingPlayer, GameMode);
   end
+else
+  %-% A player is engaging, so we tell them to reevaluate when they're 30 cycles from their kick.
+  timeUntilContact = FUN.timeLeftInKick(Fifo{engagingPlayer},GameMode);
+  if timeUntilContact > 31
+    %-%disp('reevaluated');
+    matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,engagePosition,false,1,engagingPlayer);
+    matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 1);
+    matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2;
+    [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
 
-  %-% If the player can kick, we tell them to. If not, we tell them to chase the ball.
-  if canKick
-    %Display Values:
-    %figure(4);
-    %imshow(flipud(matrixKick));
-    %figure(5);
-    %imshow(flipud(highPoint));
-  
-    [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( FifoTemp, TeamCounter, engagingPlayer, GameMode );
-    %-% NB: Change State????(set state?)
+    MinKickVel = 1.6; %-% These are currently nearly arbitrary.
+    MaxKickVel = 1.6;
+
+    %-% This canKick is used to create the player's Fifo.
+    [canKick, FifoTemp, BallTrajBackup, PlayerTrajBackup]=FUN.canKick(MinKickVel, MaxKickVel, TeamOwn{engagingPlayer}, [xVal,yVal], Ball.Pos, TeamCounter, engagingPlayer, GameMode);
   else
-    %-% Reset the Fifo and BallTraj:
-    Fifo{engagingPlayer} = [];
-    BallTraj{TeamCounter} = [-1 -1];
-    %-% Run to the ball. NB: we can make this more intelligent.
-    garbage = []; %-% Do not use the Fifo that GoHere gives us.
-    [ControlSignal{engagingPlayer}, garbage] = FUN.GoHere(Fifo{engagingPlayer}, engagingPlayer, [Ball.Pos(1),Ball.Pos(2)],TeamOwn, GameMode, CycleBatch, TeamCounter);
-    %-% NB: Change State????(set state?)
+    FifoTemp = Fifo{engagingPlayer};
   end
-  PlayerTargets{engagingPlayer} = [];
 end
 
+%-% If the engaging player can kick, we tell them to. If not, we tell them to chase the ball.
+if canKick
+  %Display Values:
+  %figure(4);
+  %imshow(flipud(matrixKick));
+  %figure(5);
+  %imshow(flipud(highPoint));
+
+  [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( FifoTemp, TeamCounter, engagingPlayer, GameMode );
+  %-% NB: Change State????(set state?)
+else
+  %-% Reset the Fifo and BallTraj:
+  Fifo{engagingPlayer} = [];
+  BallTraj{TeamCounter} = [-1 -1];
+  %-% Run to the ball. NB: we can make this more intelligent.
+  garbage = []; %-% Do not use the Fifo that GoHere gives us.
+  [ControlSignal{engagingPlayer}, garbage] = FUN.GoHere(Fifo{engagingPlayer}, engagingPlayer, [Ball.Pos(1),Ball.Pos(2)],TeamOwn, GameMode, CycleBatch, TeamCounter);
+  %-% NB: Change State????(set state?)
+end
+PlayerTargets{engagingPlayer} = [];
 
 
 
@@ -292,5 +314,6 @@ end
 
 %-% NB: When engagingPlayer is within 10, calculate matrices.
 %-% NB: -- OR when engagingPlayer is more than 10 units away, keep calculating where the kick should be.
-%-% NB: -- EVEN BETTER would be instead of 10 units, a certain amount of cycles before ball contact.
-%-% NB: Change state when the ball is far away from our net and it's been moving away from us for a long amount of time. Change back when opponent hits the ball.
+%-% NB: -- EVEN BETTER would be instead of 10 units, a certain amount of cycles before ball contact. 30 cycles should be good.
+%-% NB: Make our team able to be Team2
+%-% NB: Make players' moveTo matrices depend on where other players want to go as well.
