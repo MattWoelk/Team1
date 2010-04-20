@@ -28,6 +28,7 @@ persistent engagePosition %-% Stores where the kicker is going to contact the ba
 persistent canKick %-% Stores whether a player can kick the ball or not.
 persistent justKicked %-% Stores whether the ball was contacted between this HLS call and the previous one.
 persistent kickertarget %-% Stores the spot where the kicker is going to kick the ball.
+persistent matrixMoveOut 
 
 
 
@@ -61,6 +62,7 @@ if GameMode(1) == 0
     PlayerTargets{1} = [];
     matrixDontBlock = FUN.GraphDontBlock();
     justKicked = false;
+    matrixMoveOut = FUN.GraphMoveOut();
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -97,6 +99,7 @@ end
 
 MinKickVel = 1.6; %-% These are currently nearly arbitrary.
 MaxKickVel = 1.6;
+
 
 
 
@@ -216,7 +219,7 @@ else
     if inc ~= engagingPlayer && inc ~= currentGoalie
       %-% NB: We should have players go between opponents if we want to intercept passes.
       matrixPlayerGo = FUN.GraphShadowsStatic(TeamOwn,inc,false,1);
-      matrixGoN = (1-matrixField).*matrixPlayerGo;
+      matrixGoN = (1-matrixField).*matrixPlayerGo.*matrixMoveOut;
       if FUN.isBallGoingForGoal(Ball)
         matrixGoN = matrixGoN.*matrixDontBlock;
       end
