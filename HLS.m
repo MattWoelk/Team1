@@ -242,7 +242,7 @@ if ~isPlayerEngaging
   if canKick
     %-% instead of using Ball's position, use the position where the player will engage the ball.
     timeUntilContact = FUN.timeLeftInKick(FifoTemp,GameMode);
-    engagePositionMatrix = FUN.BallPrediction(Ball,timeUntilContact,false);
+    engagePositionMatrix = FUN.BallPrediction(Ball.Pos,timeUntilContact,false);
     engagePositionMatrix = flipud(engagePositionMatrix);
     engagePosition = engagePositionMatrix(1,:);
 
@@ -303,7 +303,7 @@ PlayerTargets{engagingPlayer} = [];
 
 %=% This establishes a prediction for the future state of the ball and any kicking player.
 %=% These values are used in the next HLS call to determine if a kick has been interrupted.
-BallPrediction = FUN.BallPrediction(Ball,10); 
+BallPrediction = FUN.BallPrediction(Ball.Pos,10); 
 for i=1:M
   PlayerPrediction{i} = FUN.PlayerPrediction( TeamOwn{i}, Fifo{i}, 10, GameMode );
 end
