@@ -257,7 +257,7 @@ if ~isPlayerEngaging
   if canKick
     %-% instead of using Ball's position, use the position where the player will engage the ball.
     timeUntilContact = FUN.timeLeftInKick(FifoTemp,GameMode);
-    engagePositionMatrix = FUN.BallPrediction(Ball,timeUntilContact,false);
+    engagePositionMatrix = FUN.BallPrediction(Ball.Pos,timeUntilContact,false);
     engagePositionMatrix = flipud(engagePositionMatrix);
     engagePosition = engagePositionMatrix(1,:);
 
@@ -333,13 +333,13 @@ PlayerTargets{engagingPlayer} = [];
 
 %=% This establishes a prediction for the future state of the ball and any kicking player.
 %=% These values are used in the next HLS call to determine if a kick has been interrupted.
-BallPrediction = FUN.BallPrediction(Ball,10); 
+BallPrediction = FUN.BallPrediction(Ball.Pos,10); 
 %-% plan for the kicker's contact with the ball as well.
 if canKick
   timeUntilContact = FUN.timeLeftInKick(Fifo{engagingPlayer},GameMode);
   if timeUntilContact <= 10
     justKicked = true;
-    engagePositionMatrix = FUN.BallPrediction(Ball,timeUntilContact,false);
+    engagePositionMatrix = FUN.BallPrediction(Ball.Pos,timeUntilContact,false);
     engagePositionMatrix = flipud(engagePositionMatrix);
     engagePosition = engagePositionMatrix(1,:);
     maxvel = MinKickVel;
@@ -350,7 +350,7 @@ if canKick
     %-% This doesn't make the velocities completely correctly, but it's okay because we don't check for them.
     targetVector = [-velx -vely];
     fakeBall.Pos = [engagePosition(1:2) targetVector];
-    reflectPre = FUN.BallPrediction(fakeBall,11-timeUntilContact);
+    reflectPre = FUN.BallPrediction(fakeBall.Pos,11-timeUntilContact);
     reflectPreSize = size(reflectPre);
     BallPrediction = [BallPrediction(1:(timeUntilContact-1),:);reflectPre(1:reflectPreSize(1),:)];
   end
