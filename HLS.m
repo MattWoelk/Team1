@@ -26,6 +26,8 @@ persistent PlayerTargets %-% An array of where players want to go.
 persistent matrixDontBlock %=% an unchanging matrix of values to keep players from blocking shots on net.
 persistent engagePosition %-% Stores where the kicker is going to contact the ball.
 persistent canKick %-% Stores whether a player can kick the ball or not.
+persistent justKicked %-% Stores whether the ball was contacted between this HLS call and the previous one.
+persistent kickertarget %-% Stores the spot where the kicker is going to kick the ball.
 
 
 
@@ -58,6 +60,7 @@ if GameMode(1) == 0
     PlayerTrajBackup = [];
     PlayerTargets{1} = [];
     matrixDontBlock = FUN.GraphDontBlock();
+    justKicked = false;
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -92,6 +95,9 @@ end
 
 
 
+MinKickVel = 1.6; %-% These are currently nearly arbitrary.
+MaxKickVel = 1.6;
+
 
 
 
@@ -118,22 +124,23 @@ isPlayerEngaging = FUN.isKicking(Fifo{engagingPlayer});
 
 
 
-if isPlayerEngaging
-  %-% Determine whether or not we have possession:
-  safeDistanceAway = false;
-  threshold = 0.8;
-  if norm(Ball.Pos(1:2) - BallPrediction(10,1:2)) > threshold || ...
-      norm(Ball.Pos(3:4) - BallPrediction(10,3:4)) > threshold
-    BallInterrupted = true; %-% An opponent (or a goalpost) has contacted the ball.
-  else
-    BallInterrupted = false;
-    if Ball.Pos(3) > 0 && Ball.Pos(1) > FieldX/2
-      %-% If the ball is far away and has been moving away predictably then set hasPossession.
-      safeDistanceAway = true;
-    end
+%-% Determine whether or not we have possession:
+safeDistanceAway = false;
+threshold = 0.8;
+%-% This ignores the different in the ball's velocity
+if norm(Ball.Pos(1:2) - BallPrediction(10,1:2)) > threshold
+  BallInterrupted = true; %-% An opponent (or a goalpost) has contacted the ball.
+else
+  BallInterrupted = false;
+  if Ball.Pos(3) > 0 && Ball.Pos(1) > FieldX/2
+    %-% If the ball is far away and has been moving away predictably then set hasPossession.
+    safeDistanceAway = true;
   end
+end
 
-  threshold = 0.001;
+threshold = 0.001;
+    
+if isPlayerEngaging
   if norm(TeamOwn{engagingPlayer}.Pos(1:2) - PlayerPrediction{engagingPlayer}(10, 1:2)) > threshold || ...
       norm(TeamOwn{engagingPlayer}.Pos(3:4) - PlayerPrediction{engagingPlayer}(10, 3:4)) > threshold
     %=% The engaging player has been disrupted by another player (friend or foe) or possibly run into a wall. As a result, the kick he was trying to perform will not work as expected.
@@ -150,10 +157,19 @@ if isPlayerEngaging
     Fifo{engagingPlayer} = [];
     BallTraj{TeamCounter} = [-1 -1];
 
-    hasPossession = false;
+    if justKicked
+      hasPossession = true;
+    else
+      hasPossession = false;
+    end
     isPlayerEngaging = false;
   end
 else
+  if BallInterrupted
+    hasPossession = false;
+  elseif safeDistanceAway
+    hasPossession = true;
+  end
   %-% NB: This function could be made much more intelligent.
   engagingPlayer = FUN.ChooseChaser(M,Ball,TeamOwn,false); %-% figure out who should kick the ball
 
@@ -163,8 +179,8 @@ else
   end
 
   if engagingPlayer == currentGoalie
-    %-% Define a new goalie.
-    currentGoalie = FUN.ClosestToNet(M,TeamOwn,FieldY,currentGoalie);
+    %-% Define a new goalie. Maybe.
+    currentGoalie = FUN.ClosestToNet(M,TeamOwn,FieldY);
     %-% NB: Set back when he's done kicking? (just a little kick-out; maybe no change needed)
     %-% -- Maybe once a player is done kicking, we see who should be goalie.
   end
@@ -218,11 +234,13 @@ end
 
 
 %-% Tell the goalie to move to an ideal spot on the field
-goalieTarget = FUN.Goalie(Ball,TeamOpp);
-garbage = []; %-% Do not use the Fifo that GoHere gives us.
-[ControlSignal{currentGoalie}, garbage] = FUN.GoHere(Fifo{currentGoalie},currentGoalie,goalieTarget,TeamOwn, GameMode, CycleBatch, TeamCounter);
+if engagingPlayer ~= currentGoalie
+  goalieTarget = FUN.Goalie(Ball,TeamOpp);
+  garbage = []; %-% Do not use the Fifo that GoHere gives us.
+  [ControlSignal{currentGoalie}, garbage] = FUN.GoHere(Fifo{currentGoalie},currentGoalie,goalieTarget,TeamOwn, GameMode, CycleBatch, TeamCounter);
 
-PlayerTargets{currentGoalie} = goalieTarget;
+  PlayerTargets{currentGoalie} = goalieTarget;
+end
 
 
 
@@ -232,9 +250,6 @@ if ~isPlayerEngaging
   matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
   matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow;
   [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
-
-  MinKickVel = 1.6; %-% These are currently nearly arbitrary.
-  MaxKickVel = 1.6;
 
   %-% This canKick is to get an estimate of how long it will take to engage the ball
   [canKick, FifoTemp, BallTrajBackup, PlayerTrajBackup]=FUN.canKick(MinKickVel, MaxKickVel, TeamOwn{engagingPlayer}, [xVal,yVal], Ball.Pos, TeamCounter, engagingPlayer, GameMode);
@@ -256,6 +271,7 @@ if ~isPlayerEngaging
 
     %-% This canKick is used to create the player's Fifo.
     [canKick, FifoTemp, BallTrajBackup, PlayerTrajBackup]=FUN.canKick(MinKickVel, MaxKickVel, TeamOwn{engagingPlayer}, [xVal,yVal], Ball.Pos, TeamCounter, engagingPlayer, GameMode);
+    kickertarget = [xVal,yVal];
   end
 else
   %-% A player is engaging, so we tell them to reevaluate when they're 30 cycles from their kick.
@@ -272,6 +288,7 @@ else
 
     %-% This canKick is used to create the player's Fifo.
     [canKick, FifoTemp, BallTrajBackup, PlayerTrajBackup]=FUN.canKick(MinKickVel, MaxKickVel, TeamOwn{engagingPlayer}, [xVal,yVal], Ball.Pos, TeamCounter, engagingPlayer, GameMode);
+    kickertarget = [xVal,yVal];
   else
     FifoTemp = Fifo{engagingPlayer};
   end
@@ -288,13 +305,26 @@ if canKick
   [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( FifoTemp, TeamCounter, engagingPlayer, GameMode );
   %-% NB: Change State????(set state?)
 else
-  %-% Reset the Fifo and BallTraj:
-  Fifo{engagingPlayer} = [];
-  BallTraj{TeamCounter} = [-1 -1];
-  %-% Run to the ball. NB: we can make this more intelligent.
-  garbage = []; %-% Do not use the Fifo that GoHere gives us.
-  [ControlSignal{engagingPlayer}, garbage] = FUN.GoHere(Fifo{engagingPlayer}, engagingPlayer, [Ball.Pos(1),Ball.Pos(2)],TeamOwn, GameMode, CycleBatch, TeamCounter);
-  %-% NB: Change State????(set state?)
+  %-% Tell the goalie to move to an ideal spot on the field
+  if engagingPlayer == currentGoalie
+    %-% Reset the Fifo and BallTraj:
+    Fifo{engagingPlayer} = [];
+    BallTraj{TeamCounter} = [-1 -1];
+
+    goalieTarget = FUN.Goalie(Ball,TeamOpp);
+    garbage = []; %-% Do not use the Fifo that GoHere gives us.
+    [ControlSignal{currentGoalie}, garbage] = FUN.GoHere(Fifo{currentGoalie},currentGoalie,goalieTarget,TeamOwn, GameMode, CycleBatch, TeamCounter);
+
+    PlayerTargets{currentGoalie} = goalieTarget;
+  else
+    %-% Reset the Fifo and BallTraj:
+    Fifo{engagingPlayer} = [];
+    BallTraj{TeamCounter} = [-1 -1];
+    %-% Run to the ball. NB: we can make this more intelligent.
+    garbage = []; %-% Do not use the Fifo that GoHere gives us.
+    [ControlSignal{engagingPlayer}, garbage] = FUN.GoHere(Fifo{engagingPlayer}, engagingPlayer, [Ball.Pos(1),Ball.Pos(2)],TeamOwn, GameMode, CycleBatch, TeamCounter);
+    %-% NB: Change State????(set state?)
+  end
 end
 PlayerTargets{engagingPlayer} = [];
 
@@ -304,16 +334,43 @@ PlayerTargets{engagingPlayer} = [];
 %=% This establishes a prediction for the future state of the ball and any kicking player.
 %=% These values are used in the next HLS call to determine if a kick has been interrupted.
 BallPrediction = FUN.BallPrediction(Ball,10); 
+%-% plan for the kicker's contact with the ball as well.
+if canKick
+  timeUntilContact = FUN.timeLeftInKick(Fifo{engagingPlayer},GameMode);
+  if timeUntilContact <= 10
+    justKicked = true;
+    engagePositionMatrix = FUN.BallPrediction(Ball,timeUntilContact,false);
+    engagePositionMatrix = flipud(engagePositionMatrix);
+    engagePosition = engagePositionMatrix(1,:);
+    maxvel = MinKickVel;
+    delx =  engagePosition(1) - kickertarget(1);
+    dely =  engagePosition(2) - kickertarget(2);
+    velx = sqrt(maxvel.^2./(1+(dely.^2/delx.^2)));
+    vely = sqrt(maxvel.^2 - velx.^2);
+    %-% This doesn't make the velocities completely correctly, but it's okay because we don't check for them.
+    targetVector = [-velx -vely];
+    fakeBall.Pos = [engagePosition(1:2) targetVector];
+    reflectPre = FUN.BallPrediction(fakeBall,11-timeUntilContact);
+    reflectPreSize = size(reflectPre);
+    BallPrediction = [BallPrediction(1:(timeUntilContact-1),:);reflectPre(1:reflectPreSize(1),:)];
+  end
+end
+  
 for i=1:M
   PlayerPrediction{i} = FUN.PlayerPrediction( TeamOwn{i}, Fifo{i}, 10, GameMode );
 end
+%-% Determine whether or not we just had a successful kick
+%-%     - figure out where the ball will be when we contact it
+%-%     - vector from where the ball will be when we contact it to where we are kicking to
+%-%     - we will probably have to store the target.
+%-%     - 
 
 
-
-
-
-%-% NB: When engagingPlayer is within 10, calculate matrices.
-%-% NB: -- OR when engagingPlayer is more than 10 units away, keep calculating where the kick should be.
-%-% NB: -- EVEN BETTER would be instead of 10 units, a certain amount of cycles before ball contact. 30 cycles should be good.
 %-% NB: Make our team able to be Team2
-%-% NB: Make players' moveTo matrices depend on where other players want to go as well.
+%-% NB: Make players' moveTo matrices depend on where other players want to go as well. (Not really that important)
+%-% NB: Let the current kicker be allowed to be the goalie as well. Reevaluate when kicker is chosen.
+%-%     - this will change the goalie moveTo section of the code (if not kicker as well...)
+%-%     - if the goalie can't kick the ball, tell him to move goalie-style
+%-%     - if we just kicked the ball and are still in control, we should still "have possession"
+disp('');
+%-% if we just kicked, ignore the ball-not-going-where-we-thought thing

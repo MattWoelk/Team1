@@ -3,6 +3,11 @@
 %-% Send -1 as currentGoalie to ignore this restriction.
 function lowestPlayer = ClosestToNet(M,TeamOwnSave,FieldY,currentGoalie)
 
+%-% If no current goalie is specified, all players are considered.
+if ~exist('currentGoalie', 'var')
+  currentGoalie = -1;
+end
+
 distanceFromNet = @(x,y) sqrt((x - 0).^2 + (y - FieldY/2).^2);
 lowestValue = 999; %-% Arbitrarily high
 
