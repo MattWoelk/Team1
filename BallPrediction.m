@@ -1,4 +1,4 @@
-function matrix = BallPrediction(Ball,cycles,displayOutput)
+function matrix = BallPrediction(BallPos,cycles,displayOutput)
 
 global qDamp FieldX FieldY
 
@@ -11,10 +11,10 @@ ballradiustop = 1.3;
 
 matrix = zeros(cycles,4);
 
-prevX = Ball.Pos(3)*qDamp; %-% predicted velocity of the ball.
-prevY = Ball.Pos(4)*qDamp;
-preX = Ball.Pos(1) + prevX; %-% predicted position of the ball.
-preY = Ball.Pos(2) + prevY;
+prevX = BallPos(3)*qDamp; %-% predicted velocity of the ball.
+prevY = BallPos(4)*qDamp;
+preX = BallPos(1) + prevX; %-% predicted position of the ball.
+preY = BallPos(2) + prevY;
 
 %-% To consider bouncing off of walls:
 if preX < (0 + ballradius)
@@ -79,6 +79,6 @@ if exist('displayOutput', 'var') && displayOutput
   xlim([0 150]);
   ylim([0 100]);
 
-  line([Ball.Pos(1) Ball.Pos(1)],[Ball.Pos(2) Ball.Pos(2)],'Marker','o','Color','black');
+  line([BallPos(1) BallPos(1)],[BallPos(2) BallPos(2)],'Marker','o','Color','black');
   line([preX preX],[preY preY],'Marker','o','Color','blue');
 end

@@ -1,23 +1,29 @@
-function [ xpos, ypos, cycles ] = Intersection ( Player, Ball )
+function [ xpos, ypos, cycles ] = Intersection ( PlayerPos, Type, BallPos, Offset )
 
-%=% NB: change input to require BallPos instead of Ball. This requires changes to BallPrediction as well.
+%INTERSECTION Returns the position and number of cycles in the future
+%  where the provided player and ball will collide. The returned number
+%  of cycles is the number of cycles after the provided offset.
 
 global FUN
 
 BallRadius = 1;
 PredictCycles = 70;
-BallPredict = FUN.BallPrediction(Ball, PredictCycles);
+BallPredict = FUN.BallPrediction(BallPos, PredictCycles);
 
-for i = 1:PredictCycles
-  distVector = (BallPredict(i, 1:2) - Player.Pos(1:2));
+if ~exist('Offset', 'var')
+  Offset = 0;
+end
+
+for i = Offset+1:PredictCycles
+  j = i - Offset;
+  distVector = (BallPredict(j, 1:2) - PlayerPos(1:2));
   unitVector = distVector/norm(distVector);
-  PlayerLoc = unitVector.*Player.Type.MaxSpeed.*i + Player.Pos(1:2);
-  if norm(PlayerLoc - BallPredict(i,1:2)) < (Player.Type.BoundingRadius + BallRadius)
+  PlayerLoc = unitVector.*Type.MaxSpeed.*i + PlayerPos(1:2);
+  if norm(PlayerLoc - BallPredict(j,1:2)) < (Type.BoundingRadius + BallRadius)
     %=% collide near here
     xpos = PlayerLoc(1);
     ypos = PlayerLoc(2);
-    PlayerLoc
-    cycles = i
+    cycles = i;
     return
   end
 end
