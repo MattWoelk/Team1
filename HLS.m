@@ -314,11 +314,20 @@ else
     Fifo{engagingPlayer} = [];
     BallTraj{TeamCounter} = [-1 -1];
 
-    goalieTarget = FUN.Goalie(Ball,TeamOpp);
+    %-% if the ball is on the way to the net, get in the way!
+    [onTheWay wallIntersection] = FUN.isBallGoingForOurGoal(Ball);
+    if onTheWay
+      %-% Find out where the ball will intersect our net
+      intersectionPoint = FUN.DistanceToLine(Ball.Pos(1),Ball.Pos(2),0,wallIntersection,TeamOwn{currentGoalie}.Pos(1),TeamOwn{currentGoalie}.Pos(2),false);
+      goalieTarget = intersectionPoint(1:2);
+    else
+      goalieTarget = FUN.Goalie(Ball,TeamOpp);
+    end
     garbage = []; %-% Do not use the Fifo that GoHere gives us.
     [ControlSignal{currentGoalie}, garbage] = FUN.GoHere(Fifo{currentGoalie},currentGoalie,goalieTarget,TeamOwn, GameMode, CycleBatch, TeamCounter);
 
     PlayerTargets{currentGoalie} = goalieTarget;
+    %-% end
   else
     %-% Reset the Fifo and BallTraj:
     Fifo{engagingPlayer} = [];
@@ -341,6 +350,7 @@ BallPrediction = FUN.BallPrediction(Ball.Pos,10);
 if canKick
   timeUntilContact = FUN.timeLeftInKick(Fifo{engagingPlayer},GameMode);
   if timeUntilContact <= 10
+    %-% The purpose of this section is to correct BallPrediction to account for when our players kick the ball.
     justKicked = true;
     engagePositionMatrix = FUN.BallPrediction(Ball.Pos,timeUntilContact,false);
     engagePositionMatrix = flipud(engagePositionMatrix);
@@ -362,18 +372,10 @@ end
 for i=1:M
   PlayerPrediction{i} = FUN.PlayerPrediction( TeamOwn{i}, Fifo{i}, 10, GameMode );
 end
-%-% Determine whether or not we just had a successful kick
-%-%     - figure out where the ball will be when we contact it
-%-%     - vector from where the ball will be when we contact it to where we are kicking to
-%-%     - we will probably have to store the target.
-%-%     - 
-
 
 %-% NB: Make our team able to be Team2
 %-% NB: Make players' moveTo matrices depend on where other players want to go as well. (Not really that important)
-%-% NB: Let the current kicker be allowed to be the goalie as well. Reevaluate when kicker is chosen.
-%-%     - this will change the goalie moveTo section of the code (if not kicker as well...)
-%-%     - if the goalie can't kick the ball, tell him to move goalie-style
-%-%     - if we just kicked the ball and are still in control, we should still "have possession"
 disp('');
-%-% if we just kicked, ignore the ball-not-going-where-we-thought thing
+%-% if an opponent can get to the ball before our goalie, block instead of try to kick.
+%-% - if the ball is within a certain distance of the goalie, he should go to where the ball is going to be to kick it out of the way, rather than continuing to position himself.
+%-% - if the ball is heading to our net and we can't kick the ball, go to the closest spot on the ball's path.

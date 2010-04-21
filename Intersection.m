@@ -4,6 +4,8 @@ function [ xpos, ypos, cycles ] = Intersection ( PlayerPos, Type, BallPos, Offse
 %  where the provided player and ball will collide. The returned number
 %  of cycles is the number of cycles after the provided offset.
 
+%-% Offset will most often be the number of cycles before the player kicks the ball.
+
 global FUN
 
 BallRadius = 1;
