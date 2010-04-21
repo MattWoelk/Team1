@@ -174,7 +174,7 @@ else
     hasPossession = true;
   end
   %-% NB: This function could be made much more intelligent.
-  engagingPlayer = FUN.ChooseChaser(M,Ball,TeamOwn,false); %-% figure out who should kick the ball
+  engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn); %-% figure out who should kick the ball
 
   if kickoff
     engagingPlayer = 3;
@@ -307,7 +307,8 @@ if canKick
 
   if engagingPlayer == currentGoalie
     %-% check to see if we actually should kick! If an opponent can get to the ball before us, we should move to it instead of kick
-    [xpos, ypos, timeTillGKick] = FUN.Intersection(TeamOwn{currentGoalie}.Pos,TeamOwn{currentGoalie}.Type, Ball.Pos, 8);
+    %-% the x position and y position are not used
+    [garbage1, garbage2, timeTillGKick] = FUN.Intersection(TeamOwn{currentGoalie}.Pos,TeamOwn{currentGoalie}.Type, Ball.Pos, 8);
       %-% 8 is chosen as an offset because that's roughly how long it takes to set up a shot.
     for i = 1:M
       [xpos, ypos, timeTillOKick(i)] = FUN.Intersection(TeamOpp{i}.Pos,TeamOwn{i}.Type,Ball.Pos,0);
@@ -390,6 +391,5 @@ end
 %-% NB: Make our team able to be Team2
 %-% NB: Make players' moveTo matrices depend on where other players want to go as well. (Not really that important)
 disp('');
-%-% if an opponent can get to the ball before our goalie, block instead of try to kick.
 %-% Players should move to where they can intersect the ball, NOT where the ball currently is.
-%-% Make chooseplayer better!
+%-% Might want to increase the size of the opponent's shadows
