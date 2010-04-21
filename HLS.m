@@ -305,9 +305,23 @@ if canKick
   %figure(5);
   %imshow(flipud(highPoint));
 
+  if engagingPlayer == currentGoalie
+    %-% check to see if we actually should kick! If an opponent can get to the ball before us, we should move to it instead of kick
+    [xpos, ypos, timeTillGKick] = FUN.Intersection(TeamOwn{currentGoalie}.Pos,TeamOwn{currentGoalie}.Type, Ball.Pos, 8);
+      %-% 8 is chosen as an offset because that's roughly how long it takes to set up a shot.
+    for i = 1:M
+      [xpos, ypos, timeTillOKick(i)] = FUN.Intersection(TeamOpp{i}.Pos,TeamOwn{i}.Type,Ball.Pos,0);
+        %-% 0 is chosen because we assume the opponent needs no time to wind-up.
+    end
+    if any(timeTillOKick < timeTillGKick)
+      canKick = false;
+    end
+  end
+
   [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( FifoTemp, TeamCounter, engagingPlayer, GameMode );
   %-% NB: Change State????(set state?)
-else
+end
+if ~canKick
   %-% Tell the goalie to move to an ideal spot on the field
   if engagingPlayer == currentGoalie
     %-% Reset the Fifo and BallTraj:
@@ -377,5 +391,5 @@ end
 %-% NB: Make players' moveTo matrices depend on where other players want to go as well. (Not really that important)
 disp('');
 %-% if an opponent can get to the ball before our goalie, block instead of try to kick.
-%-% - if the ball is within a certain distance of the goalie, he should go to where the ball is going to be to kick it out of the way, rather than continuing to position himself.
-%-% - if the ball is heading to our net and we can't kick the ball, go to the closest spot on the ball's path.
+%-% Players should move to where they can intersect the ball, NOT where the ball currently is.
+%-% Make chooseplayer better!

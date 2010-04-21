@@ -34,6 +34,6 @@ end
 PlayerLoc = [-1 -1];
 xpos = PlayerLoc(1);
 ypos = PlayerLoc(2);
-cycles = -1;
+cycles = inf;
 
 
