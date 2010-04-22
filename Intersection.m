@@ -10,6 +10,8 @@ function [ xpos, ypos, cycles ] = Intersection ( PlayerPos, Type, BallPos, Offse
 %  calculated kick.
 
 
+%-% Offset will most often be the number of cycles before the player kicks the ball.
+
 global FUN
 
 BallRadius = 1;

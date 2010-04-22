@@ -110,7 +110,6 @@ MaxKickVel = 1.6;
 
 
 
-%-% NB: What we REALLY want is players to be able to set up shots. So one player would be setting up to kick a ball that ball didn't even have the trajectory yet. Though having the player just moving to the right spot might be just the same. On that note: I'm going to make it calculate where to pass the ball based on where the players are moving to, rather than where they currently are.
 
 for i = 1:M %-% This is just to format TeamOpp{i}.Pos to play nice with GraphShadows
   OpponentTargets{i} = TeamOpp{i}.Pos;
@@ -155,7 +154,7 @@ if isPlayerEngaging
   end
 
   %-% if kick is not interrupted, tell the engaging player to continue its kick.
-  if (~BallInterrupted && ~PlayerInterrupted) || safeDistanceAway
+  if (~BallInterrupted && ~PlayerInterrupted)
     [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( Fifo{engagingPlayer}, TeamCounter, engagingPlayer, GameMode);
     hasPossession = true;
   else
@@ -169,6 +168,9 @@ if isPlayerEngaging
     end
     isPlayerEngaging = false;
   end
+  if safeDistanceAway
+    hasPossession = true;
+  end
 else
   if BallInterrupted
     hasPossession = false;
@@ -176,7 +178,7 @@ else
     hasPossession = true;
   end
   %-% NB: This function could be made much more intelligent.
-  engagingPlayer = FUN.ChooseChaser(M,Ball,TeamOwn,false); %-% figure out who should kick the ball
+  engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn); %-% figure out who should kick the ball
 
   if kickoff
     engagingPlayer = 3;
@@ -210,7 +212,7 @@ if hasPossession
 
       %-% Send player to highPoint (coord: xVal, yVal)
       garbage = []; %-% Do not use the Fifo that GoHere gives us.
-      [ControlSignal{inc}, garbage] = FUN.GoHere(Fifo{inc},inc,[xVal yVal], TeamOwn, GameMode, CycleBatch, TeamCounter);
+      [ControlSignal{inc}, garbage] = FUN.GoHere(inc,[xVal yVal], TeamOwn, GameMode, CycleBatch, TeamCounter);
       PlayerTargets{inc} = [xVal yVal];
     end
   end
@@ -229,7 +231,7 @@ else
 
       %-% Send player to highPoint (coord: xVal, yVal)
       garbage = []; %-% Do not use the Fifo that GoHere gives us.
-      [ControlSignal{inc}, garbage] = FUN.GoHere(Fifo{inc},inc,[xVal yVal], TeamOwn, GameMode, CycleBatch, TeamCounter);
+      [ControlSignal{inc}, garbage] = FUN.GoHere(inc,[xVal yVal], TeamOwn, GameMode, CycleBatch, TeamCounter);
       PlayerTargets{inc} = [xVal yVal];
     end
   end
@@ -242,7 +244,7 @@ end
 if engagingPlayer ~= currentGoalie
   goalieTarget = FUN.Goalie(Ball,TeamOpp);
   garbage = []; %-% Do not use the Fifo that GoHere gives us.
-  [ControlSignal{currentGoalie}, garbage] = FUN.GoHere(Fifo{currentGoalie},currentGoalie,goalieTarget,TeamOwn, GameMode, CycleBatch, TeamCounter);
+  [ControlSignal{currentGoalie}, garbage] = FUN.GoHere(currentGoalie,goalieTarget,TeamOwn, GameMode, CycleBatch, TeamCounter);
 
   PlayerTargets{currentGoalie} = goalieTarget;
 end
@@ -270,9 +272,6 @@ if ~isPlayerEngaging
     matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 1);
     matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2;
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
-
-    MinKickVel = 1.6; %-% These are currently nearly arbitrary.
-    MaxKickVel = 1.6;
 
     %-% This canKick is used to create the player's Fifo.
     [canKick, FifoTemp, BallTrajBackup, PlayerTrajBackup]=FUN.canKick(MinKickVel, MaxKickVel, TeamOwn{engagingPlayer}, [xVal,yVal], Ball.Pos, TeamCounter, engagingPlayer, GameMode);
@@ -307,32 +306,55 @@ if canKick
   %figure(5);
   %imshow(flipud(highPoint));
 
+  if engagingPlayer == currentGoalie
+    %-% check to see if we actually should kick! If an opponent can get to the ball before us, we should move to it instead of kick
+    %-% the x position and y position are not used
+    [garbage1, garbage2, timeTillGKick] = FUN.Intersection(TeamOwn{currentGoalie}.Pos,TeamOwn{currentGoalie}.Type, Ball.Pos, 8);
+      %-% 8 is chosen as an offset because that's roughly how long it takes to set up a shot.
+    for i = 1:M
+      [xpos, ypos, timeTillOKick(i)] = FUN.Intersection(TeamOpp{i}.Pos,TeamOwn{i}.Type,Ball.Pos,0);
+        %-% 0 is chosen because we assume the opponent needs no time to wind-up.
+    end
+    if any(timeTillOKick < timeTillGKick)
+      canKick = false;
+    end
+  end
+
   [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( FifoTemp, TeamCounter, engagingPlayer, GameMode );
   %-% NB: Change State????(set state?)
-else
+end
+if ~canKick
   %-% Tell the goalie to move to an ideal spot on the field
   if engagingPlayer == currentGoalie
     %-% Reset the Fifo and BallTraj:
     Fifo{engagingPlayer} = [];
     BallTraj{TeamCounter} = [-1 -1];
 
-    goalieTarget = FUN.Goalie(Ball,TeamOpp);
+    %-% if the ball is on the way to the net, get in the way!
+    [onTheWay wallIntersection] = FUN.isBallGoingForOurGoal(Ball);
+    if onTheWay
+      %-% Find out where the ball will intersect our net
+      intersectionPoint = FUN.DistanceToLine(Ball.Pos(1),Ball.Pos(2),0,wallIntersection,TeamOwn{currentGoalie}.Pos(1),TeamOwn{currentGoalie}.Pos(2),false);
+      goalieTarget = intersectionPoint(1:2);
+    else
+      goalieTarget = FUN.Goalie(Ball,TeamOpp);
+    end
     garbage = []; %-% Do not use the Fifo that GoHere gives us.
-    [ControlSignal{currentGoalie}, garbage] = FUN.GoHere(Fifo{currentGoalie},currentGoalie,goalieTarget,TeamOwn, GameMode, CycleBatch, TeamCounter);
+    [ControlSignal{currentGoalie}, garbage] = FUN.GoHere(currentGoalie,goalieTarget,TeamOwn, GameMode, CycleBatch, TeamCounter);
 
     PlayerTargets{currentGoalie} = goalieTarget;
+    %-% end
   else
     %-% Reset the Fifo and BallTraj:
     Fifo{engagingPlayer} = [];
     BallTraj{TeamCounter} = [-1 -1];
     %-% Run to the ball. NB: we can make this more intelligent.
     garbage = []; %-% Do not use the Fifo that GoHere gives us.
-    [ControlSignal{engagingPlayer}, garbage] = FUN.GoHere(Fifo{engagingPlayer}, engagingPlayer, [Ball.Pos(1),Ball.Pos(2)],TeamOwn, GameMode, CycleBatch, TeamCounter);
+    [ControlSignal{engagingPlayer}, garbage] = FUN.GoHere(engagingPlayer, [Ball.Pos(1),Ball.Pos(2)],TeamOwn, GameMode, CycleBatch, TeamCounter);
     %-% NB: Change State????(set state?)
   end
 end
 PlayerTargets{engagingPlayer} = [];
-
 
 
 
@@ -343,6 +365,7 @@ BallPrediction = FUN.BallPrediction(Ball.Pos,10);
 if canKick
   timeUntilContact = FUN.timeLeftInKick(Fifo{engagingPlayer},GameMode);
   if timeUntilContact <= 10
+    %-% The purpose of this section is to correct BallPrediction to account for when our players kick the ball.
     justKicked = true;
     engagePositionMatrix = FUN.BallPrediction(Ball.Pos,timeUntilContact,false);
     engagePositionMatrix = flipud(engagePositionMatrix);
@@ -364,18 +387,11 @@ end
 for i=1:M
   PlayerPrediction{i} = FUN.PlayerPrediction( TeamOwn{i}, Fifo{i}, 10, GameMode );
 end
-%-% Determine whether or not we just had a successful kick
-%-%     - figure out where the ball will be when we contact it
-%-%     - vector from where the ball will be when we contact it to where we are kicking to
-%-%     - we will probably have to store the target.
-%-%     - 
-
 
 %-% NB: Make our team able to be Team2
 %-% NB: Make players' moveTo matrices depend on where other players want to go as well. (Not really that important)
-%-% NB: Let the current kicker be allowed to be the goalie as well. Reevaluate when kicker is chosen.
-%-%     - this will change the goalie moveTo section of the code (if not kicker as well...)
-%-%     - if the goalie can't kick the ball, tell him to move goalie-style
-%-%     - if we just kicked the ball and are still in control, we should still "have possession"
-disp('');
-%-% if we just kicked, ignore the ball-not-going-where-we-thought thing
+%-% Players should move to where they can intersect the ball, NOT where the ball currently is.
+%-% Might want to increase the size of the opponent's shadows
+%-% Put a black spot in the opponent's net so that our players don't sit in it.
+%-% Weird things happen when one player gives up on kicking the ball. We think it's a problem in TP_Kick
+%-% NB: What we REALLY want is players to be able to set up shots. So one player would be setting up to kick a ball that ball didn't even have the trajectory yet. Though having the player just moving to the right spot might be just the same. On that note: I'm going to make it calculate where to pass the ball based on where the players are moving to, rather than where they currently are.
