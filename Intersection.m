@@ -5,6 +5,10 @@ function [ xpos, ypos, cycles ] = Intersection ( PlayerPos, Type, BallPos, Offse
 %  of cycles is the number of cycles after the provided offset.
 %  If the agent cannot intercept the ball within PredictCycles, the pos
 %  returned is [-1, -1] and cycles is inf.
+%  Note that this function calculates the absolute minimum time for an 
+%  agent to contact the ball, not the time it will take to make a 
+%  calculated kick.
+
 
 global FUN
 
