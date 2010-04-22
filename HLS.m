@@ -282,7 +282,7 @@ if ~isPlayerEngaging
     engagePosition = engagePositionMatrix(1,:);
 
     %-% PlayerFuture gives the positions where the ball will be able to meet up with the players when kicked.
-    PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer);
+    PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer,Fifo,GameMode);
     matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
     matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 1);
     matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2;
@@ -299,7 +299,7 @@ else
     %-%disp('reevaluated');
 
     %-% PlayerFuture gives the positions where the ball will be able to meet up with the players when kicked.
-    PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer);
+    PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer,Fifo,GameMode);
     matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
     matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 1);
     matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2;
@@ -323,10 +323,10 @@ end
   %end
 
   %Display Values:
-  %figure(4);
-  %if ~isempty(matrixKick)
-  %  imshow(flipud(matrixKick));
-  %end
+  figure(4);
+  if ~isempty(matrixKick)
+    imshow(flipud(matrixKick));
+  end
 
 %-% If the engaging player can kick, we tell them to. If not, we tell them to chase the ball.
 if canKick
