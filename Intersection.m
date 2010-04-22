@@ -3,6 +3,8 @@ function [ xpos, ypos, cycles ] = Intersection ( PlayerPos, Type, BallPos, Offse
 %INTERSECTION Returns the position and number of cycles in the future
 %  where the provided player and ball will collide. The returned number
 %  of cycles is the number of cycles after the provided offset.
+%  If the agent cannot intercept the ball within PredictCycles, the pos
+%  returned is [-1, -1] and cycles is inf.
 
 global FUN
 
@@ -18,7 +20,13 @@ for i = Offset+1:PredictCycles
   j = i - Offset;
   distVector = (BallPredict(j, 1:2) - PlayerPos(1:2));
   unitVector = distVector/norm(distVector);
-  PlayerLoc = unitVector.*Type.MaxSpeed.*i + PlayerPos(1:2);
+  
+
+  Count = FUN.U_Count( 0, U_TurnAngle( asin(unitVector(2)) ), Type, (Type.MaxSpeed/Type.Parameters(2)) );
+
+
+
+  PlayerLoc = unitVector.*Type.MaxSpeed.* (i - Count) + PlayerPos(1:2);
   if norm(PlayerLoc - BallPredict(j,1:2)) < (Type.BoundingRadius + BallRadius)
     %=% collide near here
     xpos = PlayerLoc(1);
@@ -32,6 +40,6 @@ end
 PlayerLoc = [-1 -1];
 xpos = PlayerLoc(1);
 ypos = PlayerLoc(2);
-cycles = -1;
+cycles = inf;
 
 
