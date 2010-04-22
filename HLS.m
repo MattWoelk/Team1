@@ -30,6 +30,7 @@ persistent justKicked %-% Stores whether the ball was contacted between this HLS
 persistent kickertarget %-% Stores the spot where the kicker is going to kick the ball.
 persistent matrixMoveOut 
 persistent matrixDontCamp
+persistent matrixPlayersGoStatic
 
 
 
@@ -65,6 +66,7 @@ if GameMode(1) == 0
     justKicked = false;
     matrixMoveOut = FUN.GraphMoveOut();
     matrixDontCamp = FUN.GraphDontCamp();
+    matrixPlayersGoStatic = (1-matrixField).*matrixMoveOut;
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -225,7 +227,7 @@ else
     if inc ~= engagingPlayer && inc ~= currentGoalie
       %-% NB: We should have players go between opponents if we want to intercept passes.
       matrixPlayerGo = FUN.GraphShadowsStatic(TeamOwn,inc,false,1);
-      matrixGoN = (1-matrixField).*matrixPlayerGo.*matrixMoveOut;
+      matrixGoN = matrixPlayersGoStatic.*matrixPlayerGo;
       if FUN.isBallGoingForGoal(Ball)
         matrixGoN = matrixGoN.*matrixDontBlock;
       end
