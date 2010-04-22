@@ -29,6 +29,7 @@ persistent canKick %-% Stores whether a player can kick the ball or not.
 persistent justKicked %-% Stores whether the ball was contacted between this HLS call and the previous one.
 persistent kickertarget %-% Stores the spot where the kicker is going to kick the ball.
 persistent matrixMoveOut 
+persistent matrixDontCamp
 persistent matrixPlayersGoStatic
 
 
@@ -64,6 +65,7 @@ if GameMode(1) == 0
     matrixDontBlock = FUN.GraphDontBlock();
     justKicked = false;
     matrixMoveOut = FUN.GraphMoveOut();
+    matrixDontCamp = FUN.GraphDontCamp();
     matrixPlayersGoStatic = (1-matrixField).*matrixMoveOut;
 end
 
@@ -177,7 +179,6 @@ else
   elseif safeDistanceAway
     hasPossession = true;
   end
-  %-% NB: This function could be made much more intelligent.
   engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn); %-% figure out who should kick the ball
 
   if kickoff
@@ -205,6 +206,9 @@ if hasPossession
       %-% Currently matrixGo gets a little murky when two players are beside each other, but that's probably okay.
       matrixPlayerGo = FUN.GraphShadowsStatic(TeamOwn,inc,false,1);
       matrixGo = matrixField.*matrixShadow.*matrixPlayerGo;
+      matrixGo = matrixGo.*matrixDontCamp;
+
+      %-% NB: this may be obsolete now
       if FUN.isBallGoingForGoal(Ball)
         matrixGo = matrixGo.*matrixDontBlock;
       end
@@ -238,6 +242,13 @@ else
 end
 
 
+  %Display Values:
+  %figure(4);
+  %if exist('matrixGo','var')
+  %  imshow(flipud(matrixGo));
+  %elseif exist('matrixGoN','var')
+  %  imshow(flipud(matrixGoN));
+  %end
 
 
 %-% Tell the goalie to move to an ideal spot on the field
@@ -250,6 +261,8 @@ if engagingPlayer ~= currentGoalie
 end
 
 
+matrixPlayer = [];
+matrixKick = [];
 
 
 
@@ -268,7 +281,9 @@ if ~isPlayerEngaging
     engagePositionMatrix = flipud(engagePositionMatrix);
     engagePosition = engagePositionMatrix(1,:);
 
-    matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,engagePosition,false,1,engagingPlayer);
+    %-% PlayerFuture gives the positions where the ball will be able to meet up with the players when kicked.
+    PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer);
+    matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
     matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 1);
     matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2;
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
@@ -282,7 +297,10 @@ else
   timeUntilContact = FUN.timeLeftInKick(Fifo{engagingPlayer},GameMode);
   if timeUntilContact > 31
     %-%disp('reevaluated');
-    matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,engagePosition,false,1,engagingPlayer);
+
+    %-% PlayerFuture gives the positions where the ball will be able to meet up with the players when kicked.
+    PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer);
+    matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
     matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 1);
     matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2;
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
@@ -297,6 +315,18 @@ else
     FifoTemp = Fifo{engagingPlayer};
   end
 end
+
+  %Display Values:
+  %figure(4);
+  %if ~isempty(matrixPlayer)
+  %  imshow(flipud(matrixPlayer));
+  %end
+
+  %Display Values:
+  %figure(4);
+  %if ~isempty(matrixKick)
+  %  imshow(flipud(matrixKick));
+  %end
 
 %-% If the engaging player can kick, we tell them to. If not, we tell them to chase the ball.
 if canKick
@@ -348,9 +378,9 @@ if ~canKick
     %-% Reset the Fifo and BallTraj:
     Fifo{engagingPlayer} = [];
     BallTraj{TeamCounter} = [-1 -1];
-    %-% Run to the ball. NB: we can make this more intelligent.
+    [xpos, ypos, cyc] = FUN.Intersection(TeamOwn{engagingPlayer}.Pos,TeamOwn{engagingPlayer}.Type,Ball.Pos,0);
     garbage = []; %-% Do not use the Fifo that GoHere gives us.
-    [ControlSignal{engagingPlayer}, garbage] = FUN.GoHere(engagingPlayer, [Ball.Pos(1),Ball.Pos(2)],TeamOwn, GameMode, CycleBatch, TeamCounter);
+    [ControlSignal{engagingPlayer}, garbage] = FUN.GoHere(engagingPlayer, [xpos,ypos],TeamOwn, GameMode, CycleBatch, TeamCounter);
     %-% NB: Change State????(set state?)
   end
 end
@@ -389,9 +419,14 @@ for i=1:M
 end
 
 %-% NB: Make our team able to be Team2
-%-% NB: Make players' moveTo matrices depend on where other players want to go as well. (Not really that important)
+%-% NB: Make players' GoHere matrices depend on where other players want to go as well. (Not really that important)
 %-% Players should move to where they can intersect the ball, NOT where the ball currently is.
 %-% Might want to increase the size of the opponent's shadows
-%-% Put a black spot in the opponent's net so that our players don't sit in it.
 %-% Weird things happen when one player gives up on kicking the ball. We think it's a problem in TP_Kick
 %-% NB: What we REALLY want is players to be able to set up shots. So one player would be setting up to kick a ball that ball didn't even have the trajectory yet. Though having the player just moving to the right spot might be just the same. On that note: I'm going to make it calculate where to pass the ball based on where the players are moving to, rather than where they currently are.
+%disp('-------------------------------------');
+%-% We do not always have a chaser right now.. Goalie issue probably.
+%-% Make the players actually get out of the way when the ball is heading toward their net.
+%-% Perhaps include a timeout for how long between passes the ball is still "in our control" (so that dumb teams won't affect us as much).
+
+%-% Current: kick to where the player will intersect the ball. (Using IntersectPoints)
