@@ -25,3 +25,7 @@ distance = min(sqrt((ecks - 0).^2 + (why - FieldY/2).^2),...
 resultMatrix = max((ecks < FieldX/2).*(sin((distance.*pi)./(FieldX/2) - pi./2) + 1)./4,...
                    (ecks >= FieldX/2).*((sin(((FieldX/2 -distance).*pi)./(FieldX/2) - pi./2) + 1)./4 + 0.5));
 matrix = resultMatrix;
+
+
+%-% Make a few spots in the center of the net always bright white:
+matrix(FieldY/2+3:FieldY/2-2,FieldX) = 0.99999;
