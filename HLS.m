@@ -385,7 +385,7 @@ if canKick
 end
   
 for i=1:M
-  PlayerPrediction{i} = FUN.PlayerPrediction( TeamOwn{i}, Fifo{i}, 10, GameMode );
+  PlayerPrediction{i} = FUN.PlayerPrediction( TeamOwn{i}.Pos, Fifo{i}, 10, GameMode );
 end
 
 %-% NB: Make our team able to be Team2

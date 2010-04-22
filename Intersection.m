@@ -1,8 +1,7 @@
 function [ xpos, ypos, cycles ] = Intersection ( PlayerPos, Type, BallPos, Offset )
 
 %INTERSECTION Returns the position and number of cycles in the future
-%  where the provided player and ball will collide. The returned number
-%  of cycles is the number of cycles after the provided offset.
+%  where the provided player and ball will collide. 
 %  If the agent cannot intercept the ball within PredictCycles, the pos
 %  returned is [-1, -1] and cycles is inf.
 %  Note that this function calculates the absolute minimum time for an 
