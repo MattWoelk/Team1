@@ -282,7 +282,7 @@ if ~isPlayerEngaging
     engagePosition = engagePositionMatrix(1,:);
 
     %-% PlayerFuture gives the positions where the ball will be able to meet up with the players when kicked.
-    PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer);
+    PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer,Fifo,GameMode);
     matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
     matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 1);
     matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2;
@@ -299,7 +299,7 @@ else
     %-%disp('reevaluated');
 
     %-% PlayerFuture gives the positions where the ball will be able to meet up with the players when kicked.
-    PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer);
+    PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer,Fifo,GameMode);
     matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
     matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 1);
     matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2;
@@ -420,12 +420,9 @@ end
 
 %-% NB: Make our team able to be Team2
 %-% NB: Make players' GoHere matrices depend on where other players want to go as well. (Not really that important)
-%-% Players should move to where they can intersect the ball, NOT where the ball currently is.
 %-% Might want to increase the size of the opponent's shadows
 %-% Weird things happen when one player gives up on kicking the ball. We think it's a problem in TP_Kick
-%-% NB: What we REALLY want is players to be able to set up shots. So one player would be setting up to kick a ball that ball didn't even have the trajectory yet. Though having the player just moving to the right spot might be just the same. On that note: I'm going to make it calculate where to pass the ball based on where the players are moving to, rather than where they currently are.
 %disp('-------------------------------------');
-%-% We do not always have a chaser right now.. Goalie issue probably.
 %-% Make the players actually get out of the way when the ball is heading toward their net.
 %-% Perhaps include a timeout for how long between passes the ball is still "in our control" (so that dumb teams won't affect us as much).
 
