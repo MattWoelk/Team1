@@ -323,10 +323,10 @@ end
   %end
 
   %Display Values:
-  figure(4);
-  if ~isempty(matrixKick)
-    imshow(flipud(matrixKick));
-  end
+  %figure(4);
+  %if ~isempty(matrixKick)
+  %  imshow(flipud(matrixKick));
+  %end
 
 %-% If the engaging player can kick, we tell them to. If not, we tell them to chase the ball.
 if canKick
@@ -420,7 +420,6 @@ end
 
 %-% NB: Make our team able to be Team2
 %-% NB: Make players' GoHere matrices depend on where other players want to go as well. (Not really that important)
-%-% Players should move to where they can intersect the ball, NOT where the ball currently is.
 %-% Might want to increase the size of the opponent's shadows
 %-% Weird things happen when one player gives up on kicking the ball. We think it's a problem in TP_Kick
 %disp('-------------------------------------');
