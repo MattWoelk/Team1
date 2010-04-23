@@ -96,15 +96,8 @@ if GameMode(2) == 2                     % 2:positioning manner of playing
     return
 end
 
-
-
-
 MinKickVel = 1.6; %-% These are currently nearly arbitrary.
 MaxKickVel = 1.6;
-
-
-
-
 
 
 
@@ -114,9 +107,7 @@ MaxKickVel = 1.6;
 for i = 1:M %-% This is just to format TeamOpp{i}.Pos to play nice with GraphShadows
   OpponentTargets{i} = TeamOpp{i}.Pos;
 end
-%-% NB: We might want this to use the result from matrixShadow2 (produced for a kick) so that players go to what WILL be a good position, rather than what is currently a good position.
 matrixShadow = FUN.GraphShadows(OpponentTargets,Ball.Pos,false,1);
-
 
 
 
@@ -162,6 +153,7 @@ if isPlayerEngaging
     BallTraj{TeamCounter} = [-1 -1];
 
     if justKicked
+      disp('this happens');
       hasPossession = true;
     else
       hasPossession = false;
@@ -171,7 +163,7 @@ if isPlayerEngaging
   if safeDistanceAway
     hasPossession = true;
   end
-else
+else %-% ~isPlayerEngaging
   if BallInterrupted
     hasPossession = false;
   elseif safeDistanceAway
@@ -179,17 +171,35 @@ else
   end
   engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn); %-% figure out who should kick the ball
 
-  if kickoff
-    engagingPlayer = 3;
-    kickoff = false;
-  end
-
   if engagingPlayer == currentGoalie
     %-% Define a new goalie. Maybe.
     currentGoalie = FUN.ClosestToNet(M,TeamOwn,FieldY);
     %-% NB: Set back when he's done kicking? (just a little kick-out; maybe no change needed)
     %-% -- Maybe once a player is done kicking, we see who should be goalie.
+
+    %-% If an opponent can get to the ball before us, we should move to it instead of kick and tell someone else to kick
+    %-% the x position and y position are not used
+    [garbage1, garbage2, timeTillGKick] = FUN.Intersection(TeamOwn{currentGoalie}.Pos,TeamOwn{currentGoalie}.Type, Ball.Pos, 8);
+    %-% 8 is chosen as an offset because that's roughly how long it takes to set up a shot.
+    for i = 1:M
+      [xpos, ypos, timeTillOKick(i)] = FUN.Intersection(TeamOpp{i}.Pos,TeamOwn{i}.Type,Ball.Pos,0);
+        %-% 0 is chosen because we assume the opponent needs no time to wind-up.
+    end
+    if any(timeTillOKick < timeTillGKick)
+      hasPossession = false;
+      %-% Reset the Fifo and BallTraj:
+      Fifo{currentGoalie} = [];
+      BallTraj{currentGoalie} = [-1 -1];
+
+      engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn,currentGoalie); %-% figure out who should kick the ball
+    end
   end
+
+  if kickoff
+    engagingPlayer = 3;
+    kickoff = false;
+  end
+
 end
 
 
@@ -245,7 +255,15 @@ end
 
 %-% Tell the goalie to move to an ideal spot on the field
 if engagingPlayer ~= currentGoalie
-  goalieTarget = FUN.Goalie(Ball,TeamOpp);
+  %-% if the ball is on the way to the net, get in the way!
+  [onTheWay wallIntersection] = FUN.isBallGoingForOurGoal(Ball);
+  if onTheWay
+    %-% Find out where the ball will intersect our net
+    intersectionPoint = FUN.DistanceToLine(Ball.Pos(1),Ball.Pos(2),0,wallIntersection,TeamOwn{currentGoalie}.Pos(1),TeamOwn{currentGoalie}.Pos(2),false);
+    goalieTarget = intersectionPoint(1:2);
+  else
+    goalieTarget = FUN.Goalie(Ball,TeamOpp);
+  end
   garbage = []; %-% Do not use the Fifo that GoHere gives us.
   [ControlSignal{currentGoalie}, garbage] = FUN.GoHere(currentGoalie,goalieTarget,TeamOwn, GameMode, CycleBatch, TeamCounter);
 
@@ -253,6 +271,7 @@ if engagingPlayer ~= currentGoalie
 end
 
 
+%-% These are only important for displaying output later conveniently without getting errors.
 matrixPlayer = [];
 matrixKick = [];
 
@@ -334,30 +353,13 @@ if canKick
   %  matrixKick(yVal,xVal)
   %end
 
-  if engagingPlayer == currentGoalie
-    %-% check to see if we actually should kick! If an opponent can get to the ball before us, we should move to it instead of kick
-    %-% the x position and y position are not used
-    [garbage1, garbage2, timeTillGKick] = FUN.Intersection(TeamOwn{currentGoalie}.Pos,TeamOwn{currentGoalie}.Type, Ball.Pos, 8);
-      %-% 8 is chosen as an offset because that's roughly how long it takes to set up a shot.
-    for i = 1:M
-      [xpos, ypos, timeTillOKick(i)] = FUN.Intersection(TeamOpp{i}.Pos,TeamOwn{i}.Type,Ball.Pos,0);
-        %-% 0 is chosen because we assume the opponent needs no time to wind-up.
-    end
-    if any(timeTillOKick < timeTillGKick)
-      canKick = false;
-    end
-  end
-
   [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( FifoTemp, TeamCounter, engagingPlayer, GameMode );
   %-% NB: Change State????(set state?)
 end
 if ~canKick
+  disp('~canKick');
   %-% Tell the goalie to move to an ideal spot on the field
   if engagingPlayer == currentGoalie
-    %-% Reset the Fifo and BallTraj:
-    Fifo{engagingPlayer} = [];
-    BallTraj{TeamCounter} = [-1 -1];
-
     %-% if the ball is on the way to the net, get in the way!
     [onTheWay wallIntersection] = FUN.isBallGoingForOurGoal(Ball);
     if onTheWay
@@ -371,13 +373,13 @@ if ~canKick
     [ControlSignal{currentGoalie}, garbage] = FUN.GoHere(currentGoalie,goalieTarget,TeamOwn, GameMode, CycleBatch, TeamCounter);
 
     PlayerTargets{currentGoalie} = goalieTarget;
-    %-% end
   else
     %-% Reset the Fifo and BallTraj:
     Fifo{engagingPlayer} = [];
     BallTraj{TeamCounter} = [-1 -1];
 
     %-% Tell player to intersect the ball and block it UNLESS the ball is headed toward the opposition's net.
+    %-% NB: This should be improved.
     if FUN.isBallGoingForGoal(Ball)
       xpos = FieldX.*0.9;
       if Ball.Pos(2) > TeamOwn{engagingPlayer}.Pos(2)
@@ -394,6 +396,7 @@ if ~canKick
   end
 end
 PlayerTargets{engagingPlayer} = [];
+
 
 
 
@@ -436,3 +439,8 @@ end
 %-% Perhaps include a timeout for how long between passes the ball is still "in our control" (so that dumb teams won't affect us as much).
 
 %-% Current: kick to where the player will intersect the ball. (Using IntersectPoints)
+
+%-% when out goalie is in positioning mode EVEN IF HE IS THE chosen player someone else should be chosen to engage the ball.
+currentGoalie
+engagingPlayer
+%-% Using rebounds off of the sides of the field when determining how to shoot.
