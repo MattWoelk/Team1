@@ -23,7 +23,6 @@ persistent matrixField %-% An unchanging matrix of values for the field.
 persistent BallTrajBackup %-% A backup of BallTraj
 persistent PlayerTrajBackup %-% A backup of PlayerTraj
 persistent PlayerTargets %-% An array of where players want to go.
-persistent matrixDontBlock %=% an unchanging matrix of values to keep players from blocking shots on net.
 persistent engagePosition %-% Stores where the kicker is going to contact the ball.
 persistent canKick %-% Stores whether a player can kick the ball or not.
 persistent justKicked %-% Stores whether the ball was contacted between this HLS call and the previous one.
@@ -62,7 +61,6 @@ if GameMode(1) == 0
     BallTrajBackup = [];
     PlayerTrajBackup = [];
     PlayerTargets{1} = [];
-    matrixDontBlock = FUN.GraphDontBlock();
     justKicked = false;
     matrixMoveOut = FUN.GraphMoveOut();
     matrixDontCamp = FUN.GraphDontCamp();
@@ -208,10 +206,6 @@ if hasPossession
       matrixGo = matrixField.*matrixShadow.*matrixPlayerGo;
       matrixGo = matrixGo.*matrixDontCamp;
 
-      %-% NB: this may be obsolete now
-      if FUN.isBallGoingForGoal(Ball)
-        matrixGo = matrixGo.*matrixDontBlock;
-      end
       [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixGo);
 
       %-% Send player to highPoint (coord: xVal, yVal)
@@ -227,10 +221,8 @@ else
     if inc ~= engagingPlayer && inc ~= currentGoalie
       %-% NB: We should have players go between opponents if we want to intercept passes.
       matrixPlayerGo = FUN.GraphShadowsStatic(TeamOwn,inc,false,1);
-      matrixGoN = matrixPlayersGoStatic.*matrixPlayerGo;
-      if FUN.isBallGoingForGoal(Ball)
-        matrixGoN = matrixGoN.*matrixDontBlock;
-      end
+      matrixGoN = matrixPlayersGoStatic.*matrixPlayerGo.*matrixDontCamp;
+      %---------%if FUN.isBallGoingForGoal(Ball)
       [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixGoN);
 
       %-% Send player to highPoint (coord: xVal, yVal)
@@ -335,6 +327,12 @@ if canKick
   %imshow(flipud(matrixKick));
   %figure(5);
   %imshow(flipud(highPoint));
+  %if ~isempty(matrixKick)
+  %  matrixKick
+  %  [val ind] = max(matrixKick);
+  %  max(val)
+  %  matrixKick(yVal,xVal)
+  %end
 
   if engagingPlayer == currentGoalie
     %-% check to see if we actually should kick! If an opponent can get to the ball before us, we should move to it instead of kick
@@ -378,7 +376,18 @@ if ~canKick
     %-% Reset the Fifo and BallTraj:
     Fifo{engagingPlayer} = [];
     BallTraj{TeamCounter} = [-1 -1];
-    [xpos, ypos, cyc] = FUN.Intersection(TeamOwn{engagingPlayer}.Pos,TeamOwn{engagingPlayer}.Type,Ball.Pos,0);
+
+    %-% Tell player to intersect the ball and block it UNLESS the ball is headed toward the opposition's net.
+    if FUN.isBallGoingForGoal(Ball)
+      xpos = FieldX.*0.9;
+      if Ball.Pos(2) > TeamOwn{engagingPlayer}.Pos(2)
+        ypos = FieldY.*0.1;
+      else
+        ypos = FieldY.*0.9;
+      end
+    else
+      [xpos, ypos, cyc] = FUN.Intersection(TeamOwn{engagingPlayer}.Pos,TeamOwn{engagingPlayer}.Type,Ball.Pos,0);
+    end
     garbage = []; %-% Do not use the Fifo that GoHere gives us.
     [ControlSignal{engagingPlayer}, garbage] = FUN.GoHere(engagingPlayer, [xpos,ypos],TeamOwn, GameMode, CycleBatch, TeamCounter);
     %-% NB: Change State????(set state?)

@@ -72,4 +72,4 @@ if displayOutput
   figure(4);
   imshow(flipud(resultMatrix2));
 end
-matrix = resultMatrix2;
+matrix = max(0.001,resultMatrix2);
