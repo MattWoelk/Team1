@@ -1,13 +1,15 @@
 function [ xpos, ypos, cycles ] = PassIntersection ( PlayerPos, PlayerType, PlayerFifo, GameMode, BallPos, BallVel, Offset )
 
-%======================%INTERSECTION Returns the position and number of cycles in the future
-%======================%  where the provided player and ball will collide. The returned number
-%======================%  of cycles is the number of cycles after the provided offset.
-%======================%  If the agent cannot intercept the ball within PredictCycles, the pos
-%======================%  returned is [-1, -1] and cycles is inf.
-%======================%  Note that this function calculates the absolute minimum time for an 
-%======================%  agent to contact the ball, not the time it will take to make a 
-%======================%  calculated kick.
+%PASSINTERSECTION Returns the position and number of cycles in the
+%  future where the provided player and ball can collide. This point
+%  is based on the provided Fifo of moved for the player and the 
+%  speed of the ball. The offset is the time until we can kick the
+%  ball at the provided speed. The BallPos should be the position
+%  at that same kick time.
+%  Note that this function calculates the absolute minimum time for 
+%  the ball to get to the agent's path. This does not consider the
+%  receiving agent slowing down for a kick, nor does it consider how
+%  the passing angle affects the first agent's wind up.
 
 
 global FUN
