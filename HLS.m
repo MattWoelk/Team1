@@ -323,10 +323,10 @@ end
   %end
 
   %Display Values:
-  %figure(4);
-  %if ~isempty(matrixKick)
-  %  imshow(flipud(matrixKick));
-  %end
+  figure(4);
+  if ~isempty(matrixKick)
+    imshow(flipud(matrixKick));
+  end
 
 %-% If the engaging player can kick, we tell them to. If not, we tell them to chase the ball.
 if canKick
