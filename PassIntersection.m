@@ -30,8 +30,6 @@ for i = Offset+1:PredictCycles
   FakeBall = [BallPos(1:2), BallVel*unitVector(1:2)];
   BallPredict = FUN.BallPrediction(FakeBall, PredictCycles);  %=% NB: don't need this many cycles, but this will always be sufficient
 
-  disp(BallPredict(j, 1:2));
-  disp(PlayerPredict(i, 1:2));
   if (norm(BallPredict(j, 1:2) - PlayerPredict(i, 1:2)) < (PlayerType.BoundingRadius + BallRadius)) && ~(norm(PlayerPredict(i, 1:2) - [0 0]) < 0.1)
     %=% there is a collision
 

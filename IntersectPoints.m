@@ -1,4 +1,4 @@
-function locations = IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,offset,engagingPlayer)
+function locations = IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,offset,engagingPlayer,Fifo,GameMode)
 
 global FUN M
 
@@ -16,8 +16,8 @@ for i = 1:M
     targetVector = [-velx -vely];
     fakeBall.Pos = [engagePosition(1:2) targetVector];
 
-    %-%[xpos,ypos,cycles] = FUN.CHANGETHIS(TeamOwn{i}.Pos,TeamOwn{i}.Type,engagePosition,offset);
-    [xpos,ypos,cycles] = FUN.Intersection(TeamOwn{i}.Pos,TeamOwn{i}.Type,engagePosition,offset);
+    [xpos,ypos,cycles] = FUN.PassIntersection(TeamOwn{i}.Pos,TeamOwn{i}.Type,Fifo{i},GameMode,engagePosition,MaxKickVel,offset);
+    %-%[xpos,ypos,cycles] = FUN.Intersection(TeamOwn{i}.Pos,TeamOwn{i}.Type,engagePosition,offset);
     locations{i} = [xpos ypos];
     if locations{i} < 0
       locations{i} = PlayerTargets{i};
