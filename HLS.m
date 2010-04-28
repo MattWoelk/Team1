@@ -179,7 +179,6 @@ else %-% ~isPlayerEngaging
     %-% 0 is chosen because we assume the opponent needs no time to wind-up.
   end
   if any(timeTillOKick < timeTillGKick)
-    disp('they can get there first');
     hasPossession = false;
     if engagingPlayer == currentGoalie
       %-% Reset the Fifo and BallTraj:
@@ -198,8 +197,6 @@ else %-% ~isPlayerEngaging
 
 end
 
-
-engagingPlayer
 
 
 %-% Tell the players where to position themselves.
@@ -296,7 +293,7 @@ if ~isPlayerEngaging
     %-% PlayerFuture gives the positions where the ball will be able to meet up with the players when kicked.
     PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer,Fifo,GameMode);
     matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
-    matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 1);
+    matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 2);
     matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2;
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
 
@@ -313,7 +310,7 @@ else
     %-% PlayerFuture gives the positions where the ball will be able to meet up with the players when kicked.
     PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer,Fifo,GameMode);
     matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
-    matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 1);
+    matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 2);
     matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2;
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
 
@@ -329,10 +326,10 @@ else
 end
 
   %Display Values:
-  %figure(4);
-  %if ~isempty(matrixPlayer)
-  %  imshow(flipud(matrixPlayer));
-  %end
+  figure(4);
+  if exist('matrixShadow2','var')
+    imshow(flipud(matrixShadow2));
+  end
 
   %Display Values:
   %figure(4);
