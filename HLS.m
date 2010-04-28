@@ -153,7 +153,6 @@ if isPlayerEngaging
     BallTraj{TeamCounter} = [-1 -1];
 
     if justKicked
-      disp('this happens');
       hasPossession = true;
     else
       hasPossession = false;
@@ -357,7 +356,6 @@ if canKick
   %-% NB: Change State????(set state?)
 end
 if ~canKick
-  disp('~canKick');
   %-% Tell the goalie to move to an ideal spot on the field
   if engagingPlayer == currentGoalie
     %-% if the ball is on the way to the net, get in the way!
@@ -402,11 +400,12 @@ PlayerTargets{engagingPlayer} = [];
 
 %=% This establishes a prediction for the future state of the ball and any kicking player.
 %=% These values are used in the next HLS call to determine if a kick has been interrupted.
-BallPrediction = FUN.BallPrediction(Ball.Pos,10); 
+predictCycles = 20;
+BallPrediction = FUN.BallPrediction(Ball.Pos,predictCycles); 
 %-% plan for the kicker's contact with the ball as well.
 if canKick
   timeUntilContact = FUN.timeLeftInKick(Fifo{engagingPlayer},GameMode);
-  if timeUntilContact <= 10
+  if timeUntilContact <= predictCycles
     %-% The purpose of this section is to correct BallPrediction to account for when our players kick the ball.
     justKicked = true;
     engagePositionMatrix = FUN.BallPrediction(Ball.Pos,timeUntilContact,false);
@@ -420,7 +419,7 @@ if canKick
     %-% This doesn't make the velocities completely correctly, but it's okay because we don't check for them.
     targetVector = [-velx -vely];
     fakeBall.Pos = [engagePosition(1:2) targetVector];
-    reflectPre = FUN.BallPrediction(fakeBall.Pos,11-timeUntilContact);
+    reflectPre = FUN.BallPrediction(fakeBall.Pos,predictCycles+1-timeUntilContact);
     reflectPreSize = size(reflectPre);
     BallPrediction = [BallPrediction(1:(timeUntilContact-1),:);reflectPre(1:reflectPreSize(1),:)];
   end
@@ -441,6 +440,4 @@ end
 %-% Current: kick to where the player will intersect the ball. (Using IntersectPoints)
 
 %-% when out goalie is in positioning mode EVEN IF HE IS THE chosen player someone else should be chosen to engage the ball.
-currentGoalie
-engagingPlayer
 %-% Using rebounds off of the sides of the field when determining how to shoot.
