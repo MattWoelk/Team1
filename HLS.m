@@ -25,7 +25,6 @@ persistent PlayerTrajBackup %-% A backup of PlayerTraj
 persistent PlayerTargets %-% An array of where players want to go.
 persistent engagePosition %-% Stores where the kicker is going to contact the ball.
 persistent canKick %-% Stores whether a player can kick the ball or not.
-persistent justKicked %-% Stores whether the ball was contacted between this HLS call and the previous one.
 persistent kickertarget %-% Stores the spot where the kicker is going to kick the ball.
 persistent matrixMoveOut 
 persistent matrixDontCamp
@@ -61,7 +60,6 @@ if GameMode(1) == 0
     BallTrajBackup = [];
     PlayerTrajBackup = [];
     PlayerTargets{1} = [];
-    justKicked = false;
     matrixMoveOut = FUN.GraphMoveOut();
     matrixDontCamp = FUN.GraphDontCamp();
     matrixPlayersGoStatic = (1-matrixField).*matrixMoveOut;
@@ -152,12 +150,6 @@ if isPlayerEngaging
     Fifo{engagingPlayer} = [];
     BallTraj{TeamCounter} = [-1 -1];
 
-    if justKicked
-      disp('this happens');
-      hasPossession = true;
-    else
-      hasPossession = false;
-    end
     isPlayerEngaging = false;
   end
   if safeDistanceAway
@@ -179,8 +171,8 @@ else %-% ~isPlayerEngaging
 
     %-% If an opponent can get to the ball before us, we should move to it instead of kick and tell someone else to kick
     %-% the x position and y position are not used
-    [garbage1, garbage2, timeTillGKick] = FUN.Intersection(TeamOwn{currentGoalie}.Pos,TeamOwn{currentGoalie}.Type, Ball.Pos, 8);
-    %-% 8 is chosen as an offset because that's roughly how long it takes to set up a shot.
+    [garbage1, garbage2, timeTillGKick] = FUN.Intersection(TeamOwn{currentGoalie}.Pos,TeamOwn{currentGoalie}.Type, Ball.Pos, 12);
+    %-% 12 is chosen as an offset because that's roughly how long it takes to set up a shot.
     for i = 1:M
       [xpos, ypos, timeTillOKick(i)] = FUN.Intersection(TeamOpp{i}.Pos,TeamOwn{i}.Type,Ball.Pos,0);
         %-% 0 is chosen because we assume the opponent needs no time to wind-up.
@@ -357,10 +349,10 @@ if canKick
   %-% NB: Change State????(set state?)
 end
 if ~canKick
-  disp('~canKick');
   %-% Tell the goalie to move to an ideal spot on the field
   if engagingPlayer == currentGoalie
     %-% if the ball is on the way to the net, get in the way!
+    hasPossession = false;
     [onTheWay wallIntersection] = FUN.isBallGoingForOurGoal(Ball);
     if onTheWay
       %-% Find out where the ball will intersect our net
@@ -408,7 +400,6 @@ if canKick
   timeUntilContact = FUN.timeLeftInKick(Fifo{engagingPlayer},GameMode);
   if timeUntilContact <= 10
     %-% The purpose of this section is to correct BallPrediction to account for when our players kick the ball.
-    justKicked = true;
     engagePositionMatrix = FUN.BallPrediction(Ball.Pos,timeUntilContact,false);
     engagePositionMatrix = flipud(engagePositionMatrix);
     engagePosition = engagePositionMatrix(1,:);
@@ -441,3 +432,5 @@ end
 %-% Get players' default positions to be closer to the center of the field.
 %-% Players need much bigger radiuses so that they don't go near eachother.
 %-% Current biggest folly: positioning.
+
+%-% When goalie switches from chasing to not chasing, possession should change
