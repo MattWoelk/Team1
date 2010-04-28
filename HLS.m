@@ -168,22 +168,25 @@ else %-% ~isPlayerEngaging
     %-% Define a new goalie. Maybe.
     currentGoalie = FUN.ClosestToNet(M,TeamOwn,FieldY);
     %-% NB: Set back when he's done kicking? (just a little kick-out; maybe no change needed)
-    %-% -- Maybe once a player is done kicking, we see who should be goalie.
+    %-% NB: Maybe once a player is done kicking, we see who should be goalie.
+  end
 
-    %-% If an opponent can get to the ball before us, we should move to it instead of kick and tell someone else to kick
-    %-% the x position and y position are not used
-    [garbage1, garbage2, timeTillGKick] = FUN.Intersection(TeamOwn{currentGoalie}.Pos,TeamOwn{currentGoalie}.Type, Ball.Pos, 12);
-    %-% 12 is chosen as an offset because that's roughly how long it takes to set up a shot.
-    for i = 1:M
-      [xpos, ypos, timeTillOKick(i)] = FUN.Intersection(TeamOpp{i}.Pos,TeamOwn{i}.Type,Ball.Pos,0);
-        %-% 0 is chosen because we assume the opponent needs no time to wind-up.
-    end
-    if any(timeTillOKick < timeTillGKick)
-      hasPossession = false;
+  %-% the x position and y position are not used
+  [garbage1, garbage2, timeTillGKick] = FUN.Intersection(TeamOwn{engagingPlayer}.Pos,TeamOwn{engagingPlayer}.Type, Ball.Pos, 12);
+  %-% 12 is chosen as an offset because that's roughly how long it takes to set up a shot.
+  for i = 1:M
+    [xpos, ypos, timeTillOKick(i)] = FUN.Intersection(TeamOpp{i}.Pos,TeamOwn{i}.Type,Ball.Pos,0);
+    %-% 0 is chosen because we assume the opponent needs no time to wind-up.
+  end
+  if any(timeTillOKick < timeTillGKick)
+    disp('they can get there first');
+    hasPossession = false;
+    if engagingPlayer == currentGoalie
       %-% Reset the Fifo and BallTraj:
       Fifo{currentGoalie} = [];
       BallTraj{currentGoalie} = [-1 -1];
 
+      %-% If an opponent can get to the ball before us, we should move to it instead of kick and tell someone else to kick
       engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn,currentGoalie); %-% figure out who should kick the ball
     end
   end
@@ -195,6 +198,8 @@ else %-% ~isPlayerEngaging
 
 end
 
+
+engagingPlayer
 
 
 %-% Tell the players where to position themselves.
@@ -238,10 +243,10 @@ end
 
 
   %Display Values:
-  figure(4);
-  if exist('matrixPlayersGoStatic','var')
-    imshow(flipud(matrixPlayersGoStatic));
-  end
+  %figure(4);
+  %if exist('matrixPlayersGoStatic','var')
+  %  imshow(flipud(matrixPlayersGoStatic));
+  %end
   %if exist('matrixGoN','var')
   %  imshow(flipud(matrixGoN));
   %elseif exist('matrixGo','var')
@@ -376,7 +381,7 @@ if ~canKick
 
     %-% Tell player to intersect the ball and block it UNLESS the ball is headed toward the opposition's net.
     %-% NB: This should be improved.
-    if FUN.isBallGoingForGoal(Ball)
+    if FUN.isBallGoingForGoal(Ball) && Ball.Pos(1) > FieldX/2
       xpos = FieldX.*0.9;
       if Ball.Pos(2) > TeamOwn{engagingPlayer}.Pos(2)
         ypos = FieldY.*0.1;
