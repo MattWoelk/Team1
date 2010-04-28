@@ -433,14 +433,11 @@ end
 %-% NB: Make our team able to be Team2
 %-% NB: Make players' GoHere matrices depend on where other players want to go as well. (Not really that important)
 %-% Might want to increase the size of the opponent's shadows
-%-% Weird things happen when one player gives up on kicking the ball. We think it's a problem in TP_Kick
-%disp('-------------------------------------');
-%-% Make the players actually get out of the way when the ball is heading toward their net.
+%-% Make the players actually get out of the way when the ball is heading toward their net. (It's close right now.)
 %-% Perhaps include a timeout for how long between passes the ball is still "in our control" (so that dumb teams won't affect us as much).
-
-%-% Current: kick to where the player will intersect the ball. (Using IntersectPoints)
-
-%-% when out goalie is in positioning mode EVEN IF HE IS THE chosen player someone else should be chosen to engage the ball.
-currentGoalie
-engagingPlayer
 %-% Using rebounds off of the sides of the field when determining how to shoot.
+
+%-% Increase goalie winduptime delay
+%-% Get players' default positions to be closer to the center of the field.
+%-% Players need much bigger radiuses so that they don't go near eachother.
+%-% Current biggest folly: positioning.
