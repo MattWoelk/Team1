@@ -62,7 +62,8 @@ if GameMode(1) == 0
     PlayerTargets{1} = [];
     matrixMoveOut = FUN.GraphMoveOut();
     matrixDontCamp = FUN.GraphDontCamp();
-    matrixPlayersGoStatic = (1-matrixField).*matrixMoveOut;
+    matrixSides = FUN.GraphSides();
+    matrixPlayersGoStatic = (1-matrixField).*matrixMoveOut.*matrixSides;
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -237,11 +238,14 @@ end
 
 
   %Display Values:
-  %figure(4);
-  %if exist('matrixGo','var')
-  %  imshow(flipud(matrixGo));
-  %elseif exist('matrixGoN','var')
+  figure(4);
+  if exist('matrixPlayersGoStatic','var')
+    imshow(flipud(matrixPlayersGoStatic));
+  end
+  %if exist('matrixGoN','var')
   %  imshow(flipud(matrixGoN));
+  %elseif exist('matrixGo','var')
+  %  imshow(flipud(matrixGo));
   %end
 
 
@@ -432,5 +436,5 @@ end
 %-% Get players' default positions to be closer to the center of the field.
 %-% Players need much bigger radiuses so that they don't go near eachother.
 %-% Current biggest folly: positioning.
-
-%-% When goalie switches from chasing to not chasing, possession should change
+ 
+%-% If a player is going to kick the ball AND no opponent can get there first, THEN change state
