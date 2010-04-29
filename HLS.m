@@ -151,7 +151,7 @@ if ~FUN.canGetThereFirst(TeamOpp,TeamOwn{engagingPlayer}.Pos,TeamOwn{engagingPla
     dontPickGoalie = true;
     isPlayerEngaging = false;
     Fifo{currentGoalie} = [];
-    BallTraj{currentGoalie} = [-1 -1];
+    BallTraj{TeamCounter} = [-1 -1];
   end
 end
 
@@ -282,9 +282,9 @@ end
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%-% Kicking (and moving if unable to kick) %-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-% Setting up the kick %-%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if ~isPlayerEngaging
   matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
@@ -337,9 +337,13 @@ else
 end
 
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-% Kicking (and moving if unable to kick) %-%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %-% If the engaging player can kick, we tell them to. If not, we tell them to chase the ball.
 if canKick
-
   [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( FifoTemp, TeamCounter, engagingPlayer, GameMode );
   %-% NB: Change State????(set state?)
 end
@@ -423,17 +427,11 @@ end
 %-% Notes for possible further improvements %-%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%-% NB: Make our team able to be Team2
-%-% NB: Make players' GoHere matrices depend on where other players want to go as well. (Not really that important)
-%-% Might want to increase the size of the opponent's shadows
-%-% Make the players actually get out of the way when the ball is heading toward their net. (It's close right now.)
-%-% Perhaps include a timeout for how long between passes the ball is still "in our control" (so that dumb teams won't affect us as much).
-%-% Using rebounds off of the sides of the field when determining how to shoot.
-
-%-% Increase goalie winduptime delay
-%-% Get players' default positions to be closer to the center of the field.
-%-% Players need much bigger radiuses so that they don't go near eachother.
-%-% Current biggest folly: positioning.
+%-% Players need much bigger radiuses so that they don't go near eachother. (Maybe? Maybe not.)
  
-%-% If a player is going to kick the ball AND no opponent can get there first, THEN change state
-%-% make a big black spot in the pass-to matrix so that players never pass to anywhere near the center of our goal.
+%-% If a player is going to kick the ball AND no opponent can get there first, THEN change state. (not currently a visible issue.)
+
+%-% Using rebounds off of the sides of the field when determining how to shoot.
+%-% Make the players actually get out of the way when the ball is heading toward their net. (It's close right now.)
+%-% Just moving to where the ball is when we can't kick it is turning into a very dangerous (and stupid) thing.
+%-%  - players will go toward the ball even when it means scoring on ourselves.

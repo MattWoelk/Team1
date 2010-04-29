@@ -50,8 +50,12 @@ for i=1:cycles
     PredictedCoordinates(i, :) = [ PlayerPos(1:2), NewDir ];
     PlayerPos = PredictedCoordinates(i, :);
   else
-    %=% if the number of moves in the fifo is shorter than the requested cycles, assume agents stops here
-    PredictedCoordinates(i, :) = PredictedCoordinates(i-1, :);
-    PlayerPos = PredictedCoordinates(i, :);
+    if i ~= 1
+      %=% if the number of moves in the fifo is shorter than the requested cycles, assume agents stops here
+      PredictedCoordinates(i, :) = PredictedCoordinates(i-1, :);
+      PlayerPos = PredictedCoordinates(i, :);
+    else
+      PredictedCoordinates(i, :) = PlayerPos;
+    end
   end
 end
