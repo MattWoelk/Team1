@@ -188,7 +188,7 @@ if drawEfficientShadowValues %-%Calculate and display a matrix of coordinates th
 
   bx = Pos(1);
   by = Pos(2);
-  r = 0.25; %-% The radius of the semicircle in the polar coordinate system.
+  r = 0.25*radiusMultiplier; %-% The radius of the semicircle in the polar coordinate system.
   b = 0; %-% The radius of the semicircle in the Cartesian plane.
   %h = 0;  %-% h is the angle in relation to the ball. It has the range: [-pi/2,+3pi/2)
   k = 0; %-% k is the distance from the ball to the player.
