@@ -95,13 +95,18 @@ if GameMode(2) == 2                     % 2:positioning manner of playing
     return
 end
 
+
+
+
+
+
+
+
+
+
+
 MinKickVel = 1.6; %-% These are currently nearly arbitrary.
-MaxKickVel = 1.6;
-
-
-
-
-
+MaxKickVel = 1.6; %-% They represent the speed which all our kicks will be.
 
 for i = 1:M %-% This is just to format TeamOpp{i}.Pos to play nice with GraphShadows
   OpponentTargets{i} = TeamOpp{i}.Pos;
@@ -109,16 +114,13 @@ end
 matrixShadow = FUN.GraphShadows(OpponentTargets,Ball.Pos,false,1);
 
 
-
-%-% IN BOTH STATES, ONE PLAYER GOES AFTER THE BALL WHILE THE OTHERS POSITION THEMSELVES
-%=% States are "has possession" and "does not have possession"
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-% Set states. (BallInterrupted, PlayerInterrupted, safeDistanceAway) %-%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %-% set isPlayerEngaging to true if the kicker is in the process of kicking the ball.
 isPlayerEngaging = FUN.isKicking(Fifo{engagingPlayer});
 
-
-
-%-% Determine whether or not we have possession:
 safeDistanceAway = false;
 threshold = 0.8;
 %-% This ignores the different in the ball's velocity
@@ -133,17 +135,27 @@ else
 end
 
 threshold = 0.001;
-    
-if isPlayerEngaging
-  if norm(TeamOwn{engagingPlayer}.Pos(1:2) - PlayerPrediction{engagingPlayer}(10, 1:2)) > threshold || ...
-      norm(TeamOwn{engagingPlayer}.Pos(3:4) - PlayerPrediction{engagingPlayer}(10, 3:4)) > threshold
-    %=% The engaging player has been disrupted by another player (friend or foe) or possibly run into a wall. As a result, the kick he was trying to perform will not work as expected.
-    PlayerInterrupted = true;
-  else
-    PlayerInterrupted = false;
-  end
 
-  %-% if kick is not interrupted, tell the engaging player to continue its kick.
+if norm(TeamOwn{engagingPlayer}.Pos(1:2) - PlayerPrediction{engagingPlayer}(10, 1:2)) > threshold || ...
+    norm(TeamOwn{engagingPlayer}.Pos(3:4) - PlayerPrediction{engagingPlayer}(10, 3:4)) > threshold
+  %=% The engaging player has been disrupted by another player (friend or foe) or possibly run into a wall. As a result, the kick he was trying to perform will not work as expected.
+  PlayerInterrupted = true;
+else
+  PlayerInterrupted = false;
+end
+
+if ~FUN.canGetThereFirst(TeamOpp,TeamOwn{engagingPlayer}.Pos,TeamOwn{engagingPlayer}.Type,Ball.Pos,17)
+  hasPossession = false;
+  if engagingPlayer == currentGoalie
+    isPlayerEngaging = false;
+    Fifo{currentGoalie} = [];
+    BallTraj{currentGoalie} = [-1 -1];
+  end
+end
+
+
+%-% If someone is already engaging the ball, see if they're still being successful:
+if isPlayerEngaging
   if (~BallInterrupted && ~PlayerInterrupted)
     [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( Fifo{engagingPlayer}, TeamCounter, engagingPlayer, GameMode);
     hasPossession = true;
@@ -152,16 +164,21 @@ if isPlayerEngaging
     BallTraj{TeamCounter} = [-1 -1];
 
     isPlayerEngaging = false;
+    hasPossession = false;
   end
-  if safeDistanceAway
-    hasPossession = true;
-  end
-else %-% ~isPlayerEngaging
+end
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-% Decide who should engage the ball %-%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+if ~isPlayerEngaging
+  %-% Keep state after someone kicks the ball until it is interrupted.
   if BallInterrupted
     hasPossession = false;
-  elseif safeDistanceAway
-    hasPossession = true;
   end
+
   engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn); %-% figure out who should kick the ball
 
   if engagingPlayer == currentGoalie
@@ -171,35 +188,31 @@ else %-% ~isPlayerEngaging
     %-% NB: Maybe once a player is done kicking, we see who should be goalie.
   end
 
-  %-% the x position and y position are not used
-  [garbage1, garbage2, timeTillGKick] = FUN.Intersection(TeamOwn{engagingPlayer}.Pos,TeamOwn{engagingPlayer}.Type, Ball.Pos, 12);
-  %-% 12 is chosen as an offset because that's roughly how long it takes to set up a shot.
-  for i = 1:M
-    [xpos, ypos, timeTillOKick(i)] = FUN.Intersection(TeamOpp{i}.Pos,TeamOwn{i}.Type,Ball.Pos,0);
-    %-% 0 is chosen because we assume the opponent needs no time to wind-up.
-  end
-  if any(timeTillOKick < timeTillGKick)
-    hasPossession = false;
-    if engagingPlayer == currentGoalie
-      %-% Reset the Fifo and BallTraj:
-      Fifo{currentGoalie} = [];
-      BallTraj{currentGoalie} = [-1 -1];
-
-      %-% If an opponent can get to the ball before us, we should move to it instead of kick and tell someone else to kick
-      engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn,currentGoalie); %-% figure out who should kick the ball
-    end
-  end
-
   if kickoff
     engagingPlayer = 3;
     kickoff = false;
   end
-
 end
 
 
 
-%-% Tell the players where to position themselves.
+
+
+
+
+if safeDistanceAway
+  hasPossession = true;
+end
+
+
+
+    
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-% Tell the players where to position themselves. %-%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 if hasPossession
   %-% FOR PLAYERS IN POSSESSION-STATE (who aren't going for the ball)
   %-%disp('have possession');
@@ -240,15 +253,7 @@ end
 
 
   %Display Values:
-  %figure(4);
-  %if exist('matrixPlayersGoStatic','var')
-  %  imshow(flipud(matrixPlayersGoStatic));
-  %end
-  %if exist('matrixGoN','var')
-  %  imshow(flipud(matrixGoN));
-  %elseif exist('matrixGo','var')
-  %  imshow(flipud(matrixGo));
-  %end
+  %FUN.DisplayMatrix(matrixPlayersGoStatic,4);
 
 
 %-% Tell the goalie to move to an ideal spot on the field
@@ -269,11 +274,11 @@ if engagingPlayer ~= currentGoalie
 end
 
 
-%-% These are only important for displaying output later conveniently without getting errors.
-matrixPlayer = [];
-matrixKick = [];
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-% Kicking (and moving if unable to kick) %-%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if ~isPlayerEngaging
   matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
@@ -325,31 +330,9 @@ else
   end
 end
 
-  %Display Values:
-  figure(4);
-  if exist('matrixShadow2','var')
-    imshow(flipud(matrixShadow2));
-  end
-
-  %Display Values:
-  %figure(4);
-  %if ~isempty(matrixKick)
-  %  imshow(flipud(matrixKick));
-  %end
 
 %-% If the engaging player can kick, we tell them to. If not, we tell them to chase the ball.
 if canKick
-  %Display Values:
-  %figure(4);
-  %imshow(flipud(matrixKick));
-  %figure(5);
-  %imshow(flipud(highPoint));
-  %if ~isempty(matrixKick)
-  %  matrixKick
-  %  [val ind] = max(matrixKick);
-  %  max(val)
-  %  matrixKick(yVal,xVal)
-  %end
 
   [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( FifoTemp, TeamCounter, engagingPlayer, GameMode );
   %-% NB: Change State????(set state?)
@@ -396,7 +379,9 @@ end
 PlayerTargets{engagingPlayer} = [];
 
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-% Set up Ball and Player Prediction for the next 10 cycles %-%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %=% This establishes a prediction for the future state of the ball and any kicking player.
 %=% These values are used in the next HLS call to determine if a kick has been interrupted.
@@ -422,10 +407,15 @@ if canKick
     BallPrediction = [BallPrediction(1:(timeUntilContact-1),:);reflectPre(1:reflectPreSize(1),:)];
   end
 end
-  
+
 for i=1:M
   PlayerPrediction{i} = FUN.PlayerPrediction( TeamOwn{i}.Pos, Fifo{i}, 10, GameMode );
 end
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-% Notes for possible further improvements %-%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %-% NB: Make our team able to be Team2
 %-% NB: Make players' GoHere matrices depend on where other players want to go as well. (Not really that important)
@@ -440,3 +430,4 @@ end
 %-% Current biggest folly: positioning.
  
 %-% If a player is going to kick the ball AND no opponent can get there first, THEN change state
+%-% make a big black spot in the pass-to matrix so that players never pass to anywhere near the center of our goal.
