@@ -120,6 +120,7 @@ matrixShadow = FUN.GraphShadows(OpponentTargets,Ball.Pos,false,1);
 
 %-% set isPlayerEngaging to true if the kicker is in the process of kicking the ball.
 isPlayerEngaging = FUN.isKicking(Fifo{engagingPlayer});
+dontPickGoalie = false;
 
 safeDistanceAway = false;
 threshold = 0.8;
@@ -147,6 +148,7 @@ end
 if ~FUN.canGetThereFirst(TeamOpp,TeamOwn{engagingPlayer}.Pos,TeamOwn{engagingPlayer}.Type,Ball.Pos,17)
   hasPossession = false;
   if engagingPlayer == currentGoalie
+    dontPickGoalie = true;
     isPlayerEngaging = false;
     Fifo{currentGoalie} = [];
     BallTraj{currentGoalie} = [-1 -1];
@@ -179,7 +181,11 @@ if ~isPlayerEngaging
     hasPossession = false;
   end
 
-  engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn); %-% figure out who should kick the ball
+  if dontPickGoalie
+    engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn,currentGoalie); %-% figure out who should kick the ball
+  else
+    engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn); %-% figure out who should kick the ball
+  end
 
   if engagingPlayer == currentGoalie
     %-% Define a new goalie. Maybe.
@@ -282,7 +288,7 @@ end
 
 if ~isPlayerEngaging
   matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
-  matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow;
+  matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow .* matrixMoveOut;
   [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
 
   %-% This canKick is to get an estimate of how long it will take to engage the ball
@@ -299,7 +305,7 @@ if ~isPlayerEngaging
     PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer,Fifo,GameMode);
     matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
     matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 2);
-    matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2;
+    matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut;
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
 
     %-% This canKick is used to create the player's Fifo.
@@ -316,7 +322,7 @@ else
     PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer,Fifo,GameMode);
     matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
     matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 2);
-    matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2;
+    matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut;
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
 
     MinKickVel = 1.6; %-% These are currently nearly arbitrary.
