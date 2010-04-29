@@ -178,11 +178,9 @@ else %-% ~isPlayerEngaging
 
     %-% If an opponent can get to the ball before us, we should move to it instead of kick and tell someone else to kick
     %-% the x position and y position are not used
-    [garbage1, garbage2, timeTillGKick] = FUN.Intersection(TeamOwn{currentGoalie}.Pos,TeamOwn{currentGoalie}.Type, Ball.Pos, 8);
-    %-% 8 is chosen as an offset because that's roughly how long it takes to set up a shot.
+    [garbage1, garbage2, timeTillGKick] = FUN.Intersection(TeamOwn{currentGoalie}.Pos,TeamOwn{currentGoalie}.Type, Ball.Pos, 0);
     for i = 1:M
       [xpos, ypos, timeTillOKick(i)] = FUN.Intersection(TeamOpp{i}.Pos,TeamOwn{i}.Type,Ball.Pos,0);
-        %-% 0 is chosen because we assume the opponent needs no time to wind-up.
     end
     if any(timeTillOKick < timeTillGKick)
       hasPossession = false;
@@ -257,9 +255,11 @@ if engagingPlayer ~= currentGoalie
   %-% if the ball is on the way to the net, get in the way!
   [onTheWay wallIntersection] = FUN.isBallGoingForOurGoal(Ball);
   if onTheWay
-    %-% Find out where the ball will intersect our net
+    %-% Find out where the ball will intersect our net    %=% I think this should read: Find out where the goalie can intercept the ball quickest
     intersectionPoint = FUN.DistanceToLine(Ball.Pos(1),Ball.Pos(2),0,wallIntersection,TeamOwn{currentGoalie}.Pos(1),TeamOwn{currentGoalie}.Pos(2),false);
     goalieTarget = intersectionPoint(1:2);
+    %=% NB: might want goalie to start moving along the ball trajectory once it is on the line (intersectionPoint(3) < ball radius, for instance)
+    %=%     move towards ball to get it away from our net? move towards our goal to slow the ball upon contact?
   else
     goalieTarget = FUN.Goalie(Ball,TeamOpp);
   end
@@ -288,6 +288,7 @@ if ~isPlayerEngaging
     %-% instead of using Ball's position, use the position where the player will engage the ball.
     timeUntilContact = FUN.timeLeftInKick(FifoTemp,GameMode);
     engagePositionMatrix = FUN.BallPrediction(Ball.Pos,timeUntilContact,false);
+    %=% NB: these two lines can probably be replaced; use "end" instead of "1" and no flip is needed
     engagePositionMatrix = flipud(engagePositionMatrix);
     engagePosition = engagePositionMatrix(1,:);
 
@@ -378,7 +379,13 @@ if ~canKick
 
     %-% Tell player to intersect the ball and block it UNLESS the ball is headed toward the opposition's net.
     %-% NB: This should be improved.
-    if FUN.isBallGoingForGoal(Ball)
+    %=% if a player is blocking a shot and is within N cycles of contact with the ball, move over slightly
+    pointOfContact = BallPrediction(15,1:2);
+
+    disp('checking to see if the ball will be blocked');
+    disp(FUN.isBallGoingForGoal(Ball));
+    disp(norm(pointOfContact - TeamOwn{engagingPlayer}.Pos(1:2)) < 20);
+    if FUN.isBallGoingForGoal(Ball) && (norm(pointOfContact - TeamOwn{engagingPlayer}.Pos(1:2)) < 20)
       xpos = FieldX.*0.9;
       if Ball.Pos(2) > TeamOwn{engagingPlayer}.Pos(2)
         ypos = FieldY.*0.1;
