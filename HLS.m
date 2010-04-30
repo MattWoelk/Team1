@@ -14,7 +14,7 @@ global qDampRec qDampMRec qDampLogRec
 %=% We want to remember the previous queued up commands
 persistent Fifo BallPrediction PlayerPrediction
 
-persistent kickoff 
+persistent kickoff %-% Whether we are starting a new round.
 persistent isPlayerEngaging %-% tells whether a player is currently in the process of kicking the ball.
 persistent engagingPlayer %-% tells which player is currently going after the ball.
 persistent hasPossession %-% a boolean that states whether we are in possession state or not.
@@ -26,10 +26,10 @@ persistent PlayerTargets %-% An array of where players want to go.
 persistent engagePosition %-% Stores where the kicker is going to contact the ball.
 persistent canKick %-% Stores whether a player can kick the ball or not.
 persistent kickertarget %-% Stores the spot where the kicker is going to kick the ball.
-persistent matrixMoveOut 
-persistent matrixDontCamp
-persistent matrixPlayersGoStatic
-
+persistent matrixMoveOut  %-% A black semi-circle in our net.
+persistent matrixDontCamp %-% A black semi-circle in the opponent's net.
+persistent matrixPlayersGoStatic %-% A field matrix for movement calculations.
+persistent firstCalculation %-% so that the first kick calculation for each kick is to clear the ball.
 
 
 
@@ -43,27 +43,28 @@ qDamp  = 1-Environment.BallDampingFactor;
 %%%%%%%%%%%%%%%%(::  The filling of team data/assigning  ::)%%%%%%%%%%%%%%%
 if GameMode(1) == 0
 
-    Fifo = cell(1,M);
-    PlayerPrediction = cell(1,M);
+  Fifo = cell(1,M);
+  PlayerPrediction = cell(1,M);
 
-    %=% These lines are needed to run the tactical planner
-    qDampRec = 1 / qDamp;
-    qDampMRec = 1 / (1 - qDamp);
-    qDampLogRec = 1 / log(qDamp);
+  %=% These lines are needed to run the tactical planner
+  qDampRec = 1 / qDamp;
+  qDampMRec = 1 / (1 - qDamp);
+  qDampLogRec = 1 / log(qDamp);
 
-    %-% Initialize all our persistent variables
-    isPlayerEngaging = false;
-    engagingPlayer = 2;
-    hasPossession = false;
-    currentGoalie = 1;
-    matrixField = FUN.GraphField();
-    BallTrajBackup = [];
-    PlayerTrajBackup = [];
-    PlayerTargets{1} = [];
-    matrixMoveOut = FUN.GraphMoveOut();
-    matrixDontCamp = FUN.GraphDontCamp();
-    matrixSides = FUN.GraphSides();
-    matrixPlayersGoStatic = (1-matrixField).*matrixMoveOut.*matrixSides;
+  %-% Initialize all our persistent variables
+  isPlayerEngaging = false;
+  engagingPlayer = 2;
+  hasPossession = false;
+  currentGoalie = 1;
+  matrixField = FUN.GraphField();
+  BallTrajBackup = [];
+  PlayerTrajBackup = [];
+  PlayerTargets{1} = [];
+  matrixMoveOut = FUN.GraphMoveOut();
+  matrixDontCamp = FUN.GraphDontCamp();
+  matrixSides = FUN.GraphSides();
+  matrixPlayersGoStatic = (1-matrixField).*matrixMoveOut.*matrixSides;
+  firstCalculation = true;
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -71,28 +72,28 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if GameMode(2) == 2                     % 2:positioning manner of playing
 
-    TeamOwn = FUN.HLS_SetUp(TeamOwn);
-    ControlSignal=cell(1,Team.NoofTeamMember);
-    for i= 1:Team.NoofTeamMember
-        ControlSignal{i} = FUN.TP_HARD( TeamOwn, TeamOpp, CycleBatch, i );
-        ControlSignal{i} = [GameMode(1) + (1:CycleBatch)', ControlSignal{i}(:,:)];  % timestamps?
-        Fifo{i} = [];
-        PlayerPrediction{i} = repmat(zeros(1,4), 10, 1);
-    end
-    %-% BallTraj is necessary to draw what the players are going to do.
-    BallTraj{TeamCounter} = [-1 -1];
-    for i=1:Team.NoofTeamMember
-        HLSTraj{TeamCounter}{i}.data  = [TeamOwn{i}.Pos; TeamOwn{i}.Target];
-        HLSTraj{TeamCounter}{i}.tst   = 0;
-        HLSTraj{TeamCounter}{i}.index = 1;
-    end
+  TeamOwn = FUN.HLS_SetUp(TeamOwn);
+  ControlSignal=cell(1,Team.NoofTeamMember);
+  for i= 1:Team.NoofTeamMember
+    ControlSignal{i} = FUN.TP_HARD( TeamOwn, TeamOpp, CycleBatch, i );
+    ControlSignal{i} = [GameMode(1) + (1:CycleBatch)', ControlSignal{i}(:,:)];  % timestamps?
+    Fifo{i} = [];
+    PlayerPrediction{i} = repmat(zeros(1,4), 10, 1);
+  end
+  %-% BallTraj is necessary to draw what the players are going to do.
+  BallTraj{TeamCounter} = [-1 -1];
+  for i=1:Team.NoofTeamMember
+    HLSTraj{TeamCounter}{i}.data  = [TeamOwn{i}.Pos; TeamOwn{i}.Target];
+    HLSTraj{TeamCounter}{i}.tst   = 0;
+    HLSTraj{TeamCounter}{i}.index = 1;
+  end
 
-    kickoff = true;
+  kickoff = true;
 
-    %=% This initializes the ball prediction variable
-    BallPrediction = repmat([FieldX/2, FieldY/2, 0, 0], 10, 1);
+  %=% This initializes the ball prediction variable
+  BallPrediction = repmat([FieldX/2, FieldY/2, 0, 0], 10, 1);
 
-    return
+  return
 end
 
 
@@ -127,6 +128,7 @@ threshold = 0.8;
 %-% This ignores the different in the ball's velocity
 if norm(Ball.Pos(1:2) - BallPrediction(10,1:2)) > threshold
   BallInterrupted = true; %-% An opponent (or a goalpost) has contacted the ball.
+  firstCalculation = true;
 else
   BallInterrupted = false;
   if Ball.Pos(3) > 0 && Ball.Pos(1) > FieldX/2
@@ -181,13 +183,18 @@ if ~isPlayerEngaging
     hasPossession = false;
   end
 
+  previousEngagingPlayer = engagingPlayer;
   if dontPickGoalie
     engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn,currentGoalie); %-% figure out who should kick the ball
   else
     engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn); %-% figure out who should kick the ball
   end
 
-  if engagingPlayer == currentGoalie
+  if previousEngagingPlayer ~= engagingPlayer
+    firstCalculation = true;
+  end
+
+  if engagingPlayer == currentGoalie && ~hasPossession
     %-% Define a new goalie. Maybe.
     currentGoalie = FUN.ClosestToNet(M,TeamOwn,FieldY);
     %-% NB: Set back when he's done kicking? (just a little kick-out; maybe no change needed)
@@ -287,8 +294,16 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if ~isPlayerEngaging
-  matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
-  matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow .* matrixMoveOut;
+  if ~hasPossession && firstCalculation
+    %-% the first calculated place to kick doesn't take into account our players. 
+    %-% - This makes kicks that are not able to be calculated more than once "clear the ball" 
+    %-% - rather than kick to a place where our players are going defensively.
+    %-% - hasPossession is used because we will only need to do this when we don't have ball control.
+    matrixKick = matrixField .* matrixShadow .* matrixMoveOut;
+  else
+    matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
+    matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow .* matrixMoveOut;
+  end
   [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
 
   %-% This canKick is to get an estimate of how long it will take to engage the ball
@@ -305,7 +320,11 @@ if ~isPlayerEngaging
     PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer,Fifo,GameMode);
     matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
     matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 2);
-    matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut;
+    if firstCalculation
+      matrixKick = matrixField .* matrixShadow2 .* matrixMoveOut;
+    else
+      matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut;
+    end
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
 
     %-% This canKick is used to create the player's Fifo.
@@ -313,11 +332,9 @@ if ~isPlayerEngaging
     kickertarget = [xVal,yVal];
   end
 else
-  %-% A player is engaging, so we tell them to reevaluate when they're 30 cycles from their kick.
+  %-% A player is engaging, so we tell them to reevaluate until they're 30 cycles from their kick.
   timeUntilContact = FUN.timeLeftInKick(Fifo{engagingPlayer},GameMode);
   if timeUntilContact > 31
-    %-%disp('reevaluated');
-
     %-% PlayerFuture gives the positions where the ball will be able to meet up with the players when kicked.
     PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer,Fifo,GameMode);
     matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
@@ -344,6 +361,7 @@ end
 
 %-% If the engaging player can kick, we tell them to. If not, we tell them to chase the ball.
 if canKick
+  firstCalculation = false;
   [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( FifoTemp, TeamCounter, engagingPlayer, GameMode );
   %-% NB: Change State????(set state?)
 end
@@ -428,10 +446,12 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %-% Players need much bigger radiuses so that they don't go near eachother. (Maybe? Maybe not.)
- 
 %-% If a player is going to kick the ball AND no opponent can get there first, THEN change state. (not currently a visible issue.)
-
+%----------------------------------------%
 %-% Using rebounds off of the sides of the field when determining how to shoot.
 %-% Make the players actually get out of the way when the ball is heading toward their net. (It's close right now.)
+
 %-% Just moving to where the ball is when we can't kick it is turning into a very dangerous (and stupid) thing.
 %-%  - players will go toward the ball even when it means scoring on ourselves.
+%-%  - maybe have players run between the ball and the net when they're near our goal. (might be more difficult than it sounds)
+%-%  - maybe have players position themselves instead when ball's near our goal. (not a true fix)
