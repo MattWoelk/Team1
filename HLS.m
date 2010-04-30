@@ -31,6 +31,7 @@ persistent matrixDontCamp
 persistent matrixPlayersGoStatic
 persistent predictCycles %=% The number of cycles in the future we want to predict for the ball's position
 
+persistent dimmer %=% When discouraging backwards kicks, we multiple the field behind the kicker by this
 persistent ballSpeedLog
 
 
@@ -66,6 +67,10 @@ if GameMode(1) == 0
     matrixDontCamp = FUN.GraphDontCamp();
     matrixSides = FUN.GraphSides();
     matrixPlayersGoStatic = (1-matrixField).*matrixMoveOut.*matrixSides;
+
+    %=% When discouraging backwards kicks, we multiple the field behind the kicker by this
+    %=% the lower this number (between 0 and 1) the less likely we are to kick backwards
+    dimmer = 0.9;
 
     ballSpeedLog = zeros(0,2);
 end
@@ -317,6 +322,8 @@ end
 if ~isPlayerEngaging
   matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
   matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow .* matrixMoveOut;
+  %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
+  matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
   [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
 
   %-% This canKick is to get an estimate of how long it will take to engage the ball
@@ -335,6 +342,8 @@ if ~isPlayerEngaging
     matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
     matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 2);
     matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut;
+    %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
+    matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
 
     %-% This canKick is used to create the player's Fifo.
@@ -352,6 +361,8 @@ else
     matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
     matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 2);
     matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut;
+    %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
+    matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
 
     MinKickVel = 1.6; %-% These are currently nearly arbitrary.
