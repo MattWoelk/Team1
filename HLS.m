@@ -20,6 +20,7 @@ persistent engagingPlayer %-% tells which player is currently going after the ba
 persistent hasPossession %-% a boolean that states whether we are in possession state or not.
 persistent currentGoalie %-% the player which is currently acting as the goalie
 persistent matrixField %-% An unchanging matrix of values for the field.
+persistent matrixFieldMir %-% An unchanging matrix of values for the field (including top & bottom mirrors)
 persistent BallTrajBackup %-% A backup of BallTraj
 persistent PlayerTrajBackup %-% A backup of PlayerTraj
 persistent PlayerTargets %-% An array of where players want to go.
@@ -30,6 +31,7 @@ persistent matrixMoveOut  %-% A black semi-circle in our net.
 persistent matrixDontCamp %-% A black semi-circle in the opponent's net.
 persistent matrixPlayersGoStatic %-% A field matrix for movement calculations.
 persistent firstCalculation %-% so that the first kick calculation for each kick is to clear the ball.
+persistent rebounds %-% VERY IMPORTANT: This sets the ability for players to calculate rebound when taking shots. (slows down the game)
 
 
 
@@ -50,13 +52,13 @@ if GameMode(1) == 0
   qDampRec = 1 / qDamp;
   qDampMRec = 1 / (1 - qDamp);
   qDampLogRec = 1 / log(qDamp);
-
-  %-% Initialize all our persistent variables
+%-% Initialize all our persistent variables
   isPlayerEngaging = false;
   engagingPlayer = 2;
   hasPossession = false;
   currentGoalie = 1;
   matrixField = FUN.GraphField();
+  matrixFieldMir = FUN.GraphMirror(matrixField);
   BallTrajBackup = [];
   PlayerTrajBackup = [];
   PlayerTargets{1} = [];
@@ -65,6 +67,7 @@ if GameMode(1) == 0
   matrixSides = FUN.GraphSides();
   matrixPlayersGoStatic = (1-matrixField).*matrixMoveOut.*matrixSides;
   firstCalculation = true;
+  rebounds = true; %-% VERY IMPORTANT: This sets the ability for players to calculate rebound when taking shots. (slows down the game)
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -113,6 +116,10 @@ for i = 1:M %-% This is just to format TeamOpp{i}.Pos to play nice with GraphSha
   OpponentTargets{i} = TeamOpp{i}.Pos;
 end
 matrixShadow = FUN.GraphShadows(OpponentTargets,Ball.Pos,false,1);
+if rebounds
+  matrixShadowMir = FUN.GraphShadowsMir(OpponentTargets,Ball.Pos,false,1);
+end
+%-%FUN.DisplayMatrix(FUN.GraphShadowsMir(OpponentTargets,Ball.Pos,false,1),4);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -299,12 +306,22 @@ if ~isPlayerEngaging
     %-% - This makes kicks that are not able to be calculated more than once "clear the ball" 
     %-% - rather than kick to a place where our players are going defensively.
     %-% - hasPossession is used because we will only need to do this when we don't have ball control.
-    matrixKick = matrixField .* matrixShadow .* matrixMoveOut;
+    if rebounds
+      matrixKick = matrixFieldMir .* matrixShadowMir .* FUN.GraphMirror(matrixMoveOut);
+    else
+      matrixKick = matrixField .* matrixShadow .* matrixMoveOut;
+    end
   else
-    matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
-    matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow .* matrixMoveOut;
+    if rebounds
+      matrixPlayer = FUN.GraphPlayerPositionsMir(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
+      matrixKick = max(matrixFieldMir,1-matrixPlayer) .* matrixShadowMir .* FUN.GraphMirror(matrixMoveOut);
+    else
+      matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
+      matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow .* matrixMoveOut;
+    end
   end
   [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
+  yVal = yVal - FieldY; %-% This is because graphs cannot have negative indices, so the mirrored graphs are one field-height too high.
 
   %-% This canKick is to get an estimate of how long it will take to engage the ball
   [canKick, FifoTemp, BallTrajBackup, PlayerTrajBackup]=FUN.canKick(MinKickVel, MaxKickVel, TeamOwn{engagingPlayer}, [xVal,yVal], Ball.Pos, TeamCounter, engagingPlayer, GameMode);
@@ -318,14 +335,28 @@ if ~isPlayerEngaging
 
     %-% PlayerFuture gives the positions where the ball will be able to meet up with the players when kicked.
     PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer,Fifo,GameMode);
-    matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
-    matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 2);
-    if firstCalculation
-      matrixKick = matrixField .* matrixShadow2 .* matrixMoveOut;
+    if rebounds
+      matrixPlayer = FUN.GraphPlayerPositionsMir(PlayerFuture,engagePosition,false,1,engagingPlayer);
+      matrixShadow2 = FUN.GraphShadowsMir(OpponentTargets, engagePosition, false, 2);
     else
-      matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut;
+      matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
+      matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 2);
+    end
+    if firstCalculation
+      if rebounds
+        matrixKick = matrixFieldMir .* matrixShadow2 .* FUN.GraphMirror(matrixMoveOut);
+      else
+        matrixKick = matrixField .* matrixShadow2 .* matrixMoveOut;
+      end
+    else
+      if rebounds
+        matrixKick = max(matrixFieldMir,1-matrixPlayer) .* matrixShadow2 .* FUN.GraphMirror(matrixMoveOut);
+      else
+        matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut;
+      end
     end
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
+    yVal = yVal - FieldY; %-% This is because graphs cannot have negative indices, so the mirrored graphs are one field-height too high.
 
     %-% This canKick is used to create the player's Fifo.
     [canKick, FifoTemp, BallTrajBackup, PlayerTrajBackup]=FUN.canKick(MinKickVel, MaxKickVel, TeamOwn{engagingPlayer}, [xVal,yVal], Ball.Pos, TeamCounter, engagingPlayer, GameMode);
@@ -337,10 +368,17 @@ else
   if timeUntilContact > 31
     %-% PlayerFuture gives the positions where the ball will be able to meet up with the players when kicked.
     PlayerFuture = FUN.IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,timeUntilContact,engagingPlayer,Fifo,GameMode);
-    matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
-    matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 2);
-    matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut;
+    if rebounds
+      matrixPlayer = FUN.GraphPlayerPositionsMir(PlayerFuture,engagePosition,false,1,engagingPlayer);
+      matrixShadow2 = FUN.GraphShadowsMir(OpponentTargets, engagePosition, false, 2);
+      matrixKick = max(matrixFieldMir,1-matrixPlayer) .* matrixShadow2 .* FUN.GraphMirror(matrixMoveOut);
+    else
+      matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
+      matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 2);
+      matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut;
+    end
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
+    yVal = yVal - FieldY; %-% This is because graphs cannot have negative indices, so the mirrored graphs are one field-height too high.
 
     MinKickVel = 1.6; %-% These are currently nearly arbitrary.
     MaxKickVel = 1.6;
