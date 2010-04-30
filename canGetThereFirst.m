@@ -1,5 +1,6 @@
 function canGetThereFirst = canGetThereFirst(TeamOpp,PlayerPos,PlayerType,BallPos,offset)
 %-% offset: roughly how long it takes to set up a shot. (17 seems like a good choice)
+%=% NB: this offset is an approximation. If the ball is moving quickly, this approximation will fail. This might be better to incorporate with the Intersection function.
 
 global FUN M
 

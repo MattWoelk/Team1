@@ -29,6 +29,7 @@ persistent kickertarget %-% Stores the spot where the kicker is going to kick th
 persistent matrixMoveOut 
 persistent matrixDontCamp
 persistent matrixPlayersGoStatic
+persistent predictCycles %=% The number of cycles in the future we want to predict for the ball's position
 
 
 
@@ -90,7 +91,8 @@ if GameMode(2) == 2                     % 2:positioning manner of playing
     kickoff = true;
 
     %=% This initializes the ball prediction variable
-    BallPrediction = repmat([FieldX/2, FieldY/2, 0, 0], 10, 1);
+    predictCycles = 20;
+    BallPrediction = repmat([FieldX/2, FieldY/2, 0, 0], predictCycles, 1);
 
     return
 end
@@ -148,7 +150,6 @@ end
 if ~FUN.canGetThereFirst(TeamOpp,TeamOwn{engagingPlayer}.Pos,TeamOwn{engagingPlayer}.Type,Ball.Pos,17)
   hasPossession = false;
   if engagingPlayer == currentGoalie
-    dontPickGoalie = true;
     isPlayerEngaging = false;
     Fifo{currentGoalie} = [];
     BallTraj{TeamCounter} = [-1 -1];
@@ -188,7 +189,7 @@ if ~isPlayerEngaging
     hasPossession = false;
   end
 
-  if dontPickGoalie
+  if ~FUN.canGetThereFirst(TeamOpp, TeamOwn{currentGoalie}.Pos, TeamOwn{currentGoalie}.Type, Ball.Pos, 17) %=% if the goalie cannot get to the ball before an opponent, do not let him leave the net
     engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn,currentGoalie); %-% figure out who should kick the ball
   else
     engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn); %-% figure out who should kick the ball
@@ -200,6 +201,7 @@ if ~isPlayerEngaging
     %-% NB: Set back when he's done kicking? (just a little kick-out; maybe no change needed)
   end
 
+  %=% NB: should be fixed to account for larger/smaller teams. I think this was done as a crude patch for when the ball is not moving which happens primarily at kickoff. Since this could happen at times other than kickoff, this might want to be accounted for as well.
   if kickoff
     engagingPlayer = 3;
     kickoff = false;
@@ -231,6 +233,7 @@ if hasPossession
   for inc = 1:M
     if inc ~= engagingPlayer && inc ~= currentGoalie %-% Engaging Player is going after the ball.
       %-% NB: we want to not go through other players to get somewhere.
+        %=% ^Perhaps a dim shadow behind other players could fix this?
       %-% Currently matrixGo gets a little murky when two players are beside each other, but that's probably okay.
       matrixPlayerGo = FUN.GraphShadowsStatic(TeamOwn,inc,false,1);
       matrixGo = matrixField.*matrixShadow.*matrixPlayerGo;
@@ -264,8 +267,6 @@ else
 end
 
 
-  %Display Values:
-  %FUN.DisplayMatrix(matrixPlayersGoStatic,4);
 
 
 %-% Tell the goalie to move to an ideal spot on the field
@@ -273,11 +274,11 @@ if engagingPlayer ~= currentGoalie
   %-% if the ball is on the way to the net, get in the way!
   [onTheWay wallIntersection] = FUN.isBallGoingForOurGoal(Ball);
   if onTheWay
-    %-% Find out where the ball will intersect our net    %=% I think this should read: Find out where the goalie can intercept the ball quickest
+    %-% Find out where the ball will intersect our net    %=% <-- I think this comment should read: Find out where the goalie can intercept the ball quickest
     intersectionPoint = FUN.DistanceToLine(Ball.Pos(1),Ball.Pos(2),0,wallIntersection,TeamOwn{currentGoalie}.Pos(1),TeamOwn{currentGoalie}.Pos(2),false);
     goalieTarget = intersectionPoint(1:2);
     %=% NB: might want goalie to start moving along the ball trajectory once it is on the line (intersectionPoint(3) < ball radius, for instance)
-    %=%     move towards ball to get it away from our net? move towards our goal to slow the ball upon contact?
+    %=%     move towards ball to get it away from our net? move towards our goal to slow the ball upon contact? attempt a slower/faster kick? only intercept if ball is close?
   else
     goalieTarget = FUN.Goalie(Ball,TeamOpp);
   end
@@ -306,7 +307,7 @@ if ~isPlayerEngaging
     %-% instead of using Ball's position, use the position where the player will engage the ball.
     timeUntilContact = FUN.timeLeftInKick(FifoTemp,GameMode);
     engagePositionMatrix = FUN.BallPrediction(Ball.Pos,timeUntilContact,false);
-    %=% NB: these two lines can probably be replaced; use "end" instead of "1" and no flip is needed
+    %=% NB: these two lines can probably be replaced to improve speed; use "end" instead of "1" and no flip is needed
     engagePositionMatrix = flipud(engagePositionMatrix);
     engagePosition = engagePositionMatrix(1,:);
 
@@ -379,9 +380,7 @@ if ~canKick
     %=% if a player is blocking a shot and is within N cycles of contact with the ball, move over slightly
     pointOfContact = BallPrediction(15,1:2);
 
-    disp('checking to see if the ball will be blocked');
-    disp(FUN.isBallGoingForGoal(Ball));
-    disp(norm(pointOfContact - TeamOwn{engagingPlayer}.Pos(1:2)) < 20);
+    %=% NB: the condition for making a player move out of the way might be able to use some improvement still. Players should be moved to an intelligent location.
     if FUN.isBallGoingForGoal(Ball) && (norm(pointOfContact - TeamOwn{engagingPlayer}.Pos(1:2)) < 20) %=% Ball.Pos(1) > FieldX/2 <= Matt's
       xpos = FieldX.*0.9;
       if Ball.Pos(2) > TeamOwn{engagingPlayer}.Pos(2)
@@ -400,13 +399,12 @@ end
 PlayerTargets{engagingPlayer} = [];
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%-% Set up Ball and Player Prediction for the next 10 cycles %-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-% Set up Ball and Player Prediction for the next 'predictCycles' cycles %-%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %=% This establishes a prediction for the future state of the ball and any kicking player.
 %=% These values are used in the next HLS call to determine if a kick has been interrupted.
-predictCycles = 20;
 BallPrediction = FUN.BallPrediction(Ball.Pos,predictCycles); 
 %-% plan for the kicker's contact with the ball as well.
 if canKick
