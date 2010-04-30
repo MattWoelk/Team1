@@ -31,6 +31,7 @@ persistent matrixDontCamp
 persistent matrixPlayersGoStatic
 persistent predictCycles %=% The number of cycles in the future we want to predict for the ball's position
 
+persistent ballSpeedLog
 
 
 
@@ -65,6 +66,8 @@ if GameMode(1) == 0
     matrixDontCamp = FUN.GraphDontCamp();
     matrixSides = FUN.GraphSides();
     matrixPlayersGoStatic = (1-matrixField).*matrixMoveOut.*matrixSides;
+
+    ballSpeedLog = zeros(0,2);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -108,7 +111,23 @@ end
 
 
 MinKickVel = 1.6; %-% These are currently nearly arbitrary.
-MaxKickVel = 1.6; %-% They represent the speed which all our kicks will be.
+MaxKickVel = 2.6; %-% They represent the speed which all our kicks will be.
+
+%=% 1.6 works decently but a dynamic choice for kick speed would allow greater versitility
+%=% TP_Kick (and thus canKick, our wrapper for it) will find the first working kick within a range, but it is slow and not necessarily the best kick speed
+%=% we want to use the ball's current speed and use that to map a new kicking velocity on a different range
+
+RangeKickVel = 0; %=% If we want TP_Kick to try a wider range of speeds, turn this value up
+ballSpeed = norm(Ball.Pos(3:4));
+MidKickVel = ballSpeed*0.35 + 1.3;
+MinKickVel = MidKickVel - RangeKickVel/2;
+MaxKickVel = MidKickVel + RangeKickVel/2;
+
+
+
+
+
+
 
 for i = 1:M %-% This is just to format TeamOpp{i}.Pos to play nice with GraphShadows
   OpponentTargets{i} = TeamOpp{i}.Pos;
@@ -346,6 +365,18 @@ else
   end
 end
 
+%=% debugging display for dynamic kicking speed
+%=%disp('.');
+%=%disp('.');
+%=%disp('Ball speed output');
+%=%disp('Ball speed:');
+%=%disp(norm(Ball.Pos(3:4)));
+%=%disp('Attempted kick speed:');
+%=%disp(MinKickVel);
+%=%disp('canKick:');
+%=%disp(canKick);
+%=%ballSpeedLog = [ballSpeedLog; norm(Ball.Pos(3:4)), canKick];
+%=%disp(max(ballSpeedLog(:,1)));
 
 %-% If the engaging player can kick, we tell them to. If not, we tell them to chase the ball.
 if canKick
