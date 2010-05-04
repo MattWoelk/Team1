@@ -1,6 +1,8 @@
-%-% This function displays shadows behind opponents, which are the areas where the players should not move.
-
 function matrix = GraphShadowsStatic(TeamOppSave, CurrentPlayer, displayOutput, radiusMultiplier)
+
+%-% This function displays shadows behind opponents, which are the areas where the players should not move.
+%-% The shadows are circles, and their radii don't change size.
+
 global FUN Score
 global Environment Team M FieldX FieldY
 

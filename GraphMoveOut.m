@@ -1,7 +1,7 @@
+function matrix = GraphMoveOut()
+
 %=% This function maps a deadzone into our goal so that we don't accidentally pass into our net and so we don't crowd the goalie.
 %=% The matrix returned from this function should be multiplied by the matrix used to choose player's destination.
-
-function matrix = GraphMoveOut()
 
 global FUN Score
 global Environment Team M FieldX FieldY

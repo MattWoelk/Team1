@@ -1,9 +1,13 @@
+function matrix = GraphShadows(PlayerPositions, Pos, displayOutput, radiusMultiplier)
+
 %-% This function displays shadows behind opponents, which are the areas where the ball should not be passed.
 
-function matrix = GraphShadows(PlayerPositions, Pos, displayOutput, radiusMultiplier)
 global FUN Score
 global Environment Team M FieldX FieldY
 
+
+%-% This makes it so the last part of the code is the only part that is run!!!!!!!!
+%-% (The last part is the only good part, and the rest can probably be deleted)
 drawShadowFunction = false;
   drawShadowFunctionPolar = false;
   drawShadowFunctionCartesian = false;

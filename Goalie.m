@@ -1,6 +1,8 @@
-%-% Biased to Team1???
-%function defines the position of the goalie in defense case
 function target = Goalie(Ball,TeamOpp)
+
+%-% This function defines the position where the goalie should go
+%-% when the goalie in defensive mode.
+
 persistent boundingRadius myline1
 global  FieldY Environment M FUN
 
@@ -12,7 +14,6 @@ end
 distBtwnPnts = @(x1,y1,x2,y2) (sqrt((x2-x1).^2 + (y2-y1).^2));
 %-%See which opponent is closest to the center of the net, and return that distance.
 
-%-%WILL ONLY WORK IF WE ARE TEAM1 (assuming no global reversal of directions...)
 %-%Calculate the angle formed by two lines that go from the goalposts to the ball:
 %-%distance between goalposts:
 c = Environment.GoalSize;
@@ -65,14 +66,6 @@ else
   target = [intersection(1), ypos - (ypos-Ball.Pos(2))/3];
 end
 
-%-% TODO:
-%-%   get the goalie to attack the ball if he knows he's going to get there before anyone else. 
-%-%       OR get the goalie to go to where the ball is going to be, rather than where the ball currently is.
-%-%   when this happens, get the goalie to actually kick the ball intelligently
-%-%   and also determined by possible bounce shots
-%-%   Implement the 2-sates system. Intercepting (to be added) and positions (currently implemented)
-%-%   Document this all in diagrams and put references to it in the code
-
 %-% SHOW LIMITING LINES: --v
 %-%figure(3)
 %-%cla
@@ -81,44 +74,3 @@ end
 %-%myline1 = line([0,Ball.Pos(1)],[ypos,Ball.Pos(2)],'LineStyle','-','Color','blue');
 %-%myline2 = line([intersection(1),TeamOpp{care}.Pos(1)],[intersection(2),TeamOpp{care}.Pos(2)],'LineStyle','-','Color','red');
 %-% --^
-
-
-%-%OLD CODE--v
-%a%%Received parameters
-%a%Bx=Ball.Pos(1);
-%a%By=Ball.Pos(2);
-%a%Vx=Ball.Pos(3);
-%a%Vy=Ball.Pos(4);
-%a%
-%a%target = 0;
-%a%
-%a%if Bx > 10
-%a%    distToGoal = 5; %distance from the goal, keep slightly more to allow for kicking out
-%a%else
-%a%    distToGoal = 3;
-%a%end
-%a%
-%a%%-%target = [placement,FieldY/2];
-%a%if Vx < 0
-%a%    %if the ball is aimed at our goal
-%a%    slope = Vy/Vx;
-%a%
-%a%    %x=0-side coordinate under attack
-%a%    ua = slope*(distToGoal - Bx) + By;
-%a%
-%a%
-%a%    if ua < FieldY/2+Environment.GoalSize/2 && ua > FieldY/2-Environment.GoalSize/2
-%a%        %if ball is aimed at the goal - catch it!
-%a%        target = [distToGoal, ua];
-%a%    elseif ua < FieldY/2-Environment.GoalSize/2
-%a%        %otherwise - stay in the closest to attack point corner
-%a%        target = [distToGoal, FieldY/2-Environment.GoalSize/2];
-%a%    elseif ua > FieldY/2+Environment.GoalSize/2
-%a%        target = [distToGoal, FieldY/2+Environment.GoalSize/2];
-%a%    end
-%a%else
-%a%    %otherwise - stay in the middle of the goal
-%a%    target = [distToGoal, FieldY/2];
-%a%end
-%a%
-%a%

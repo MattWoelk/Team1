@@ -1,6 +1,8 @@
-%-%This function displays shadows behind opponents, which are the areas where the ball should not be passed.
-
 function = GraphShadows2(TeamOppSave, Pos)
+
+%-%This function displays shadows behind opponents, which are the areas where the ball should not be passed.
+%-% It is the old version, which should not be used because it is slow.
+
 global FUN Score
 global Environment Team M FieldX FieldY qDamp
 

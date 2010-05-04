@@ -1,6 +1,9 @@
-%-% This function graphs a field where its values are dependent on the players' positions.
-
 function matrix = GraphPlayerPositionsMir(PlayerPositions, Pos, displayOutput, radiusMultiplier, ignorePlayer)
+
+%-% This function graphs a field where its values are dependent on the players' positions.
+%-% It takes into account rebounds when calculating where to kick.
+%-% It also runs very slowly
+
 global FUN Environment Team M FieldX FieldY qDamp
 
 ELLIPSEcircle = false; %-% Ellipse mode is not yet working properly.

@@ -1,6 +1,7 @@
 function isBallGoingForGoal = isBallGoingForGoal( Ball )
 
-%=% This function does not take into account rebounds off of the walls.
+%-% This function determines whether the ball is heading for the opponent's goal.
+%=% It does not take into account rebounds off of the walls.
 
 global FieldX FieldY Environment
 

@@ -1,8 +1,8 @@
-%-% The purpose of this function is to determine which player should chase after the ball.
-
 function inc = ChooseChaser(M,Ball,TeamOwnSave,displayOutput)
 global FUN
 
+%-% The purpose of this function is to determine which player should chase after the ball.
+%-% This is the old version, which doesn't work as well as the new one.
 
 for inc = 1:M
   px(inc) = TeamOwnSave{inc}.Pos(1);

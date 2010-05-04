@@ -1,5 +1,9 @@
 function matrix = GraphMirror(inputmatrix)
 
+%-% This function takes in a field-sized graph and 
+%-% outputs a graph that is the correct size to be
+%-% used when calculating mirrored kicks.
+
 sizes = size(inputmatrix);
 
 matrix = zeros(sizes(1)*3,sizes(2));

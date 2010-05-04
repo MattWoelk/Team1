@@ -1,6 +1,7 @@
+function matrix = GraphField()
+
 %-% This function maps the field in terms of the best locations to pass the ball to, not taking into account player positions, ball positions, or opponent positions.
 
-function matrix = GraphField()
 global FUN Score
 global Environment Team M FieldX FieldY
 

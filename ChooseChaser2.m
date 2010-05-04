@@ -1,7 +1,8 @@
+function ind = ChooseChaser2(Ball,TeamOwn,NotThisOne)
+
 %-% The purpose of this function is to determine which player should chase after the ball.
 %-% Whichever player can get to the ball first is chosen.
-
-function ind = ChooseChaser2(Ball,TeamOwn,NotThisOne)
+%-% If NotThisOne is set, that player will not be chosen.
 
 global FUN M
 
