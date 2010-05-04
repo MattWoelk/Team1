@@ -3,7 +3,7 @@
 
 function matrix = GraphDontBlock()
 
-global FUN Score
+global FUN 
 global Environment Team M FieldX FieldY
 
 matrix = zeros(FieldY,FieldX);

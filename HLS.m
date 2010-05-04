@@ -342,9 +342,8 @@ if ~isPlayerEngaging
     %if rebounds
     %  matrixKick = matrixFieldMir .* matrixShadowMir .* FUN.GraphMirror(matrixMoveOut);
     %else
-      matrixKick = matrixField .* matrixShadow .* matrixMoveOut;
-      %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
-      matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)]; %=% dimmer might not be needed here
+      matrixDimmer = FUN.GraphDimmer(TeamOwn{engagingPlayer}.Pos, dimmer);
+      matrixKick = matrixField .* matrixShadow .* matrixMoveOut .* matrixDimmer;
     %end
   else
     %if rebounds
@@ -352,9 +351,8 @@ if ~isPlayerEngaging
     %  matrixKick = max(matrixFieldMir,1-matrixPlayer) .* matrixShadowMir .* FUN.GraphMirror(matrixMoveOut);
     %else
       matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
-      matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow .* matrixMoveOut;
-      %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
-      matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
+      matrixDimmer = FUN.GraphDimmer(TeamOwn{engagingPlayer}.Pos, dimmer);
+      matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow .* matrixMoveOut .* matrixDimmer;
     %end
   end
   [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
@@ -382,23 +380,19 @@ if ~isPlayerEngaging
     end
     if firstCalculation
       if rebounds
-        matrixKick = matrixFieldMir .* matrixShadow2 .* FUN.GraphMirror(matrixMoveOut);
-        %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
-        matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
+        matrixDimmer = FUN.GraphMirror(FUN.GraphDimmer(TeamOwn{engagingPlayer}.Pos, dimmer));
+        matrixKick = matrixFieldMir .* matrixShadow2 .* FUN.GraphMirror(matrixMoveOut) .* matrixDimmer;
       else
-        matrixKick = matrixField .* matrixShadow2 .* matrixMoveOut;
-        %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
-        matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
+        matrixDimmer = FUN.GraphDimmer(TeamOwn{engagingPlayer}.Pos, dimmer);
+        matrixKick = matrixField .* matrixShadow2 .* matrixMoveOut .* matrixDimmer;
       end
     else
       if rebounds
-        matrixKick = max(matrixFieldMir,1-matrixPlayer) .* matrixShadow2 .* FUN.GraphMirror(matrixMoveOut);
-        %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
-        matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
+        matrixDimmer = FUN.GraphMirror(FUN.GraphDimmer(TeamOwn{engagingPlayer}.Pos, dimmer));
+        matrixKick = max(matrixFieldMir,1-matrixPlayer) .* matrixShadow2 .* FUN.GraphMirror(matrixMoveOut) .* matrixDimmer;
       else
-        matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut;
-        %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
-        matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
+        matrixDimmer = FUN.GraphDimmer(TeamOwn{engagingPlayer}.Pos, dimmer);
+        matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut .* matrixDimmer;
       end
     end
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
@@ -417,15 +411,13 @@ else
     if rebounds
       matrixPlayer = FUN.GraphPlayerPositionsMir(PlayerFuture,engagePosition,false,1,engagingPlayer);
       matrixShadow2 = FUN.GraphShadowsMir(OpponentTargets, engagePosition, false, 2);
-      matrixKick = max(matrixFieldMir,1-matrixPlayer) .* matrixShadow2 .* FUN.GraphMirror(matrixMoveOut);
-      %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
-      matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
+      matrixDimmer = FUN.GraphMirror(FUN.GraphDimmer(TeamOwn{engagingPlayer}.Pos, dimmer));
+      matrixKick = max(matrixFieldMir,1-matrixPlayer) .* matrixShadow2 .* FUN.GraphMirror(matrixMoveOut) .* matrixDimmer;
     else
       matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
       matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 2);
-      matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut;
-      %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
-      matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
+      matrixDimmer = FUN.GraphDimmer(TeamOwn{engagingPlayer}.Pos, dimmer);
+      matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut .* matrixDimmer;
     end
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
     yVal = yVal - FieldY; %-% This is because graphs cannot have negative indices, so the mirrored graphs are one field-height too high.
