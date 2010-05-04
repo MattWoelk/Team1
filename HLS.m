@@ -3,7 +3,6 @@
 
 function ControlSignal = HLS( TeamOwn, TeamOpp, Ball, GameMode, TeamCounter )
 global FUN Score
-
 global Environment Team M FieldX FieldY qDamp
 global BallTraj HLSTraj                         % is needed for drawing: the route of a ball and the robots planned trajektóriái [=.Target*]
 global CycleBatch
@@ -306,19 +305,19 @@ if ~isPlayerEngaging
     %-% - This makes kicks that are not able to be calculated more than once "clear the ball" 
     %-% - rather than kick to a place where our players are going defensively.
     %-% - hasPossession is used because we will only need to do this when we don't have ball control.
-    if rebounds
-      matrixKick = matrixFieldMir .* matrixShadowMir .* FUN.GraphMirror(matrixMoveOut);
-    else
+    %if rebounds
+    %  matrixKick = matrixFieldMir .* matrixShadowMir .* FUN.GraphMirror(matrixMoveOut);
+    %else
       matrixKick = matrixField .* matrixShadow .* matrixMoveOut;
-    end
+    %end
   else
-    if rebounds
-      matrixPlayer = FUN.GraphPlayerPositionsMir(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
-      matrixKick = max(matrixFieldMir,1-matrixPlayer) .* matrixShadowMir .* FUN.GraphMirror(matrixMoveOut);
-    else
+    %if rebounds
+    %  matrixPlayer = FUN.GraphPlayerPositionsMir(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
+    %  matrixKick = max(matrixFieldMir,1-matrixPlayer) .* matrixShadowMir .* FUN.GraphMirror(matrixMoveOut);
+    %else
       matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
       matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow .* matrixMoveOut;
-    end
+    %end
   end
   [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
   yVal = yVal - FieldY; %-% This is because graphs cannot have negative indices, so the mirrored graphs are one field-height too high.
