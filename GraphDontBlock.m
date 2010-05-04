@@ -3,7 +3,7 @@ function matrix = GraphDontBlock()
 %=% This function maps a deadzone into the opponents goal so that we don't accidentally block shots on their goal.
 %=% The matrix returned from this function should be multiplied by the matrix used to choose player's destination.
 
-global FUN Score
+global FUN 
 global Environment Team M FieldX FieldY
 
 matrix = zeros(FieldY,FieldX);
