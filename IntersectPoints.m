@@ -1,5 +1,9 @@
 function locations = IntersectPoints(TeamOwn,PlayerTargets,engagePosition,MaxKickVel,offset,engagingPlayer,Fifo,GameMode)
 
+%-% This function calculates where the ball would be able to contact each player
+%-% based on where the player is currently going.
+%-% also based on the ball's max speed being MaxKickVel.
+
 global FUN M
 
 locations = [];

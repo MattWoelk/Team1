@@ -1,7 +1,9 @@
-function output = DisplayBallPrediction(Ball,qDamp,FieldX,FieldY)
+function location = DisplayBallPrediction(Ball,qDamp,FieldX,FieldY)
 
 %-% Predict where the ball will be when HLS is calculated again.
+%-% Graph it all nicely.
 %-% Now it takes into account bounces off the wall.
+
 persistent countDown;
 if isempty(countDown)
   countDown = 9;
@@ -54,7 +56,7 @@ set(gcf,'Position',[500 30 490 300]);
 xlim([0 150]);
 ylim([0 100]);
 
-output = [preX preY];
+location = [preX preY];
 
 %-%line([x1 x1],[y1 y1],'Marker','o','Color','black');
 line([Ball.Pos(1) Ball.Pos(1)],[Ball.Pos(2) Ball.Pos(2)],'Marker','o','Color','black');

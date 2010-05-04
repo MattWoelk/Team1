@@ -1,5 +1,8 @@
 function matrix = GraphSides()
 
+%-% This function makes a graph that has dimmed edges
+%-% It is used to make players stay more toward the center of the field.
+
 global FUN Score FieldX FieldY
 
 %-% This makes a nice curve that keeps players away from the edges of the field.

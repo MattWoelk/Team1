@@ -1,8 +1,12 @@
 function noOutput = DisplayMatrix(matrix,whichFigure)
 
-figure(whichFigure);
-if exist('matrix','var')
-  imshow(flipud(matrix));
+%-% This function displays matrix on figure whichFigure.
+
+if exist('whichFigure','var')
+  figure(whichFigure);
+else
+  figure(4);
 end
+imshow(flipud(matrix));
 
 noOutput = true;

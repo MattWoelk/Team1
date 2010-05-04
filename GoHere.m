@@ -1,4 +1,5 @@
 function [ControlSignalForPlayer, FifoForPlayer] = GoHere(agentIndex, Target, TeamOwn, GameMode, CycleBatch, TeamCounter)
+
 %-% This function tells a player to go to a location specified in Target.
 
 global FUN HLSTraj

@@ -1,5 +1,7 @@
 function [isBallGoingForGoal wallIntersection] = isBallGoingForOurGoal( Ball )
 
+
+%-% This function determines whether the ball is heading for our goal.
 %=% This function does not take into account rebounds off of the walls.
 
 global FieldX FieldY Environment

@@ -55,7 +55,7 @@ if GameMode(1) == 0
   qDampRec = 1 / qDamp;
   qDampMRec = 1 / (1 - qDamp);
   qDampLogRec = 1 / log(qDamp);
-%-% Initialize all our persistent variables
+  %-% Initialize all our persistent variables
   isPlayerEngaging = false;
   engagingPlayer = 2;
   hasPossession = false;
@@ -70,7 +70,7 @@ if GameMode(1) == 0
   matrixSides = FUN.GraphSides();
   matrixPlayersGoStatic = (1-matrixField).*matrixMoveOut.*matrixSides;
   firstCalculation = true;
-  rebounds = true; %-% VERY IMPORTANT: This sets the ability for players to calculate rebound when taking shots. (slows down the game)
+  rebounds = true; %-% VERY IMPORTANT: This sets the ability for players to calculate rebounds when taking shots. (slows down the game)
 
   %=% When discouraging backwards kicks, we multiple the field behind the kicker by this
   %=% the lower this number (between 0 and 1) the less likely we are to kick backwards
@@ -267,7 +267,6 @@ end
 
 if hasPossession
   %-% FOR PLAYERS IN POSSESSION-STATE (who aren't going for the ball)
-  %-%disp('have possession');
   for inc = 1:M
     if inc ~= engagingPlayer && inc ~= currentGoalie %-% Engaging Player is going after the ball.
       %-% NB: we want to not go through other players to get somewhere.
@@ -287,7 +286,6 @@ if hasPossession
   end
 else
   %-% FOR PLAYERS IN NON-POSSESSION-STATE (who aren't going for the ball)
-  %-%disp('no possession');
   for inc = 1:M
     if inc ~= engagingPlayer && inc ~= currentGoalie
       %-% NB: We should have players go between opponents if we want to intercept passes.
@@ -339,23 +337,14 @@ if ~isPlayerEngaging
     %-% - This makes kicks that are not able to be calculated more than once "clear the ball" 
     %-% - rather than kick to a place where our players are going defensively.
     %-% - hasPossession is used because we will only need to do this when we don't have ball control.
-    %if rebounds
-    %  matrixKick = matrixFieldMir .* matrixShadowMir .* FUN.GraphMirror(matrixMoveOut);
-    %else
-      matrixKick = matrixField .* matrixShadow .* matrixMoveOut;
-      %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
-      matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)]; %=% dimmer might not be needed here
-    %end
+    matrixKick = matrixField .* matrixShadow .* matrixMoveOut;
+    %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
+    matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)]; %=% dimmer might not be needed here
   else
-    %if rebounds
-    %  matrixPlayer = FUN.GraphPlayerPositionsMir(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
-    %  matrixKick = max(matrixFieldMir,1-matrixPlayer) .* matrixShadowMir .* FUN.GraphMirror(matrixMoveOut);
-    %else
-      matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
-      matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow .* matrixMoveOut;
-      %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
-      matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
-    %end
+    matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
+    matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow .* matrixMoveOut;
+    %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
+    matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
   end
   [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
   yVal = yVal - FieldY; %-% This is because graphs cannot have negative indices, so the mirrored graphs are one field-height too high.
@@ -526,7 +515,7 @@ if canKick
     engagePositionMatrix = FUN.BallPrediction(Ball.Pos,timeUntilContact,false);
     engagePositionMatrix = flipud(engagePositionMatrix);
     engagePosition = engagePositionMatrix(1,:);
-    maxvel = MinKickVel;
+    maxvel = MinKickVel; %-% Now that we're using a range of possible speeds, this doesn't work.
     delx =  engagePosition(1) - kickertarget(1);
     dely =  engagePosition(2) - kickertarget(2);
     velx = sqrt(maxvel.^2./(1+(dely.^2/delx.^2)));
@@ -549,10 +538,9 @@ end
 %-% Notes for possible further improvements %-%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%-% Players need much bigger radiuses so that they don't go near eachother. (Maybe? Maybe not.)
+%-% Players need much bigger radii so that they don't go near each other. (Maybe? Maybe not.)
 %-% If a player is going to kick the ball AND no opponent can get there first, THEN change state. (not currently a visible issue.)
 %----------------------------------------%
-%-% Using rebounds off of the sides of the field when determining how to shoot.
 %-% Make the players actually get out of the way when the ball is heading toward their net. (It's close right now.)
 
 %-% Just moving to where the ball is when we can't kick it is turning into a very dangerous (and stupid) thing.

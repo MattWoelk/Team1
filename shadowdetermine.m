@@ -1,8 +1,9 @@
+function Passable = ShadowDetermine(TeamOppSave, Ball, xpos, ypos)
+
 %-% This function calculates whether an opponent is blocking a position or not.
 %-% In other words: if an opponent can reach the ball if we pass it to the given position,
 %-% then this function will return False;
 
-function Passable = ShadowDetermine(TeamOppSave, Ball, xpos, ypos)
 global FUN Score
 global Environment Team M FieldX FieldY qDamp
 

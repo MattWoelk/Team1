@@ -1,8 +1,9 @@
 function matrix = BallPrediction(BallPos,cycles,displayOutput)
 
+%-% Predict where the ball will be "cycles" number of cycles in the future.
+
 global qDamp FieldX FieldY
 
-%-% Predict where the ball will be "cycles" number of cycles in the future.
 %-% Now it takes into account bounces off the wall.
 ballradius = 1;
 

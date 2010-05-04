@@ -1,6 +1,7 @@
-%-% This function displays shadows behind opponents, which are the areas where the ball should not be passed.
-
 function matrix = GraphShadowsMir(PlayerPositions, Pos, displayOutput, radiusMultiplier)
+
+%-% This function displays shadows behind opponents, which are the areas where the ball should not be passed.
+%-% It also takes into account rebounds when calculating where to kick.
 
 %-% This currently doesn't take into account the radius of the ball.
 %-%  - (But we don't need that much accuracy for what we're doing.)
