@@ -31,6 +31,10 @@ persistent matrixDontCamp %-% A black semi-circle in the opponent's net.
 persistent matrixPlayersGoStatic %-% A field matrix for movement calculations.
 persistent firstCalculation %-% so that the first kick calculation for each kick is to clear the ball.
 persistent rebounds %-% VERY IMPORTANT: This sets the ability for players to calculate rebound when taking shots. (slows down the game)
+persistent predictCycles %=% The number of cycles in the future we want to predict for the ball's position
+
+persistent dimmer %=% When discouraging backwards kicks, we multiple the field behind the kicker by this
+persistent ballSpeedLog
 
 
 
@@ -67,6 +71,12 @@ if GameMode(1) == 0
   matrixPlayersGoStatic = (1-matrixField).*matrixMoveOut.*matrixSides;
   firstCalculation = true;
   rebounds = true; %-% VERY IMPORTANT: This sets the ability for players to calculate rebound when taking shots. (slows down the game)
+
+  %=% When discouraging backwards kicks, we multiple the field behind the kicker by this
+  %=% the lower this number (between 0 and 1) the less likely we are to kick backwards
+  dimmer = 0.9;
+
+  ballSpeedLog = zeros(0,2);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -93,7 +103,8 @@ if GameMode(2) == 2                     % 2:positioning manner of playing
   kickoff = true;
 
   %=% This initializes the ball prediction variable
-  BallPrediction = repmat([FieldX/2, FieldY/2, 0, 0], 10, 1);
+  predictCycles = 20;
+  BallPrediction = repmat([FieldX/2, FieldY/2, 0, 0], predictCycles, 1);
 
   return
 end
@@ -109,7 +120,23 @@ end
 
 
 MinKickVel = 1.6; %-% These are currently nearly arbitrary.
-MaxKickVel = 1.6; %-% They represent the speed which all our kicks will be.
+MaxKickVel = 2.6; %-% They represent the speed which all our kicks will be.
+
+%=% 1.6 works decently but a dynamic choice for kick speed would allow greater versitility
+%=% TP_Kick (and thus canKick, our wrapper for it) will find the first working kick within a range, but it is slow and not necessarily the best kick speed
+%=% we want to use the ball's current speed and use that to map a new kicking velocity on a different range
+
+RangeKickVel = 0; %=% If we want TP_Kick to try a wider range of speeds, turn this value up
+ballSpeed = norm(Ball.Pos(3:4));
+MidKickVel = ballSpeed*0.35 + 1.3;
+MinKickVel = MidKickVel - RangeKickVel/2;
+MaxKickVel = MidKickVel + RangeKickVel/2;
+
+
+
+
+
+
 
 for i = 1:M %-% This is just to format TeamOpp{i}.Pos to play nice with GraphShadows
   OpponentTargets{i} = TeamOpp{i}.Pos;
@@ -143,7 +170,7 @@ else
   end
 end
 
-threshold = 0.001;
+threshold = 0.01;
 
 if norm(TeamOwn{engagingPlayer}.Pos(1:2) - PlayerPrediction{engagingPlayer}(10, 1:2)) > threshold || ...
     norm(TeamOwn{engagingPlayer}.Pos(3:4) - PlayerPrediction{engagingPlayer}(10, 3:4)) > threshold
@@ -156,12 +183,15 @@ end
 if ~FUN.canGetThereFirst(TeamOpp,TeamOwn{engagingPlayer}.Pos,TeamOwn{engagingPlayer}.Type,Ball.Pos,17)
   hasPossession = false;
   if engagingPlayer == currentGoalie
-    dontPickGoalie = true;
     isPlayerEngaging = false;
     Fifo{currentGoalie} = [];
     BallTraj{TeamCounter} = [-1 -1];
   end
 end
+
+
+
+
 
 
 %-% If someone is already engaging the ball, see if they're still being successful:
@@ -179,6 +209,9 @@ if isPlayerEngaging
 end
 
 
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %-% Decide who should engage the ball %-%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -190,7 +223,7 @@ if ~isPlayerEngaging
   end
 
   previousEngagingPlayer = engagingPlayer;
-  if dontPickGoalie
+  if ~FUN.canGetThereFirst(TeamOpp, TeamOwn{currentGoalie}.Pos, TeamOwn{currentGoalie}.Type, Ball.Pos, 17) %=% if the goalie cannot get to the ball before an opponent, do not let him leave the net
     engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn,currentGoalie); %-% figure out who should kick the ball
   else
     engagingPlayer = FUN.ChooseChaser2(Ball,TeamOwn); %-% figure out who should kick the ball
@@ -204,9 +237,9 @@ if ~isPlayerEngaging
     %-% Define a new goalie. Maybe.
     currentGoalie = FUN.ClosestToNet(M,TeamOwn,FieldY);
     %-% NB: Set back when he's done kicking? (just a little kick-out; maybe no change needed)
-    %-% NB: Maybe once a player is done kicking, we see who should be goalie.
   end
 
+  %=% NB: should be fixed to account for larger/smaller teams. I think this was done as a crude patch for when the ball is not moving which happens primarily at kickoff. Since this could happen at times other than kickoff, this might want to be accounted for as well.
   if kickoff
     engagingPlayer = 3;
     kickoff = false;
@@ -238,6 +271,7 @@ if hasPossession
   for inc = 1:M
     if inc ~= engagingPlayer && inc ~= currentGoalie %-% Engaging Player is going after the ball.
       %-% NB: we want to not go through other players to get somewhere.
+        %=% ^Perhaps a dim shadow behind other players could fix this?
       %-% Currently matrixGo gets a little murky when two players are beside each other, but that's probably okay.
       matrixPlayerGo = FUN.GraphShadowsStatic(TeamOwn,inc,false,1);
       matrixGo = matrixField.*matrixShadow.*matrixPlayerGo;
@@ -271,8 +305,6 @@ else
 end
 
 
-  %Display Values:
-  %FUN.DisplayMatrix(matrixPlayersGoStatic,4);
 
 
 %-% Tell the goalie to move to an ideal spot on the field
@@ -280,9 +312,11 @@ if engagingPlayer ~= currentGoalie
   %-% if the ball is on the way to the net, get in the way!
   [onTheWay wallIntersection] = FUN.isBallGoingForOurGoal(Ball);
   if onTheWay
-    %-% Find out where the ball will intersect our net
+    %-% Find out where the ball will intersect our net    %=% <-- I think this comment should read: Find out where the goalie can intercept the ball quickest
     intersectionPoint = FUN.DistanceToLine(Ball.Pos(1),Ball.Pos(2),0,wallIntersection,TeamOwn{currentGoalie}.Pos(1),TeamOwn{currentGoalie}.Pos(2),false);
     goalieTarget = intersectionPoint(1:2);
+    %=% NB: might want goalie to start moving along the ball trajectory once it is on the line (intersectionPoint(3) < ball radius, for instance)
+    %=%     move towards ball to get it away from our net? move towards our goal to slow the ball upon contact? attempt a slower/faster kick? only intercept if ball is close?
   else
     goalieTarget = FUN.Goalie(Ball,TeamOpp);
   end
@@ -309,6 +343,8 @@ if ~isPlayerEngaging
     %  matrixKick = matrixFieldMir .* matrixShadowMir .* FUN.GraphMirror(matrixMoveOut);
     %else
       matrixKick = matrixField .* matrixShadow .* matrixMoveOut;
+      %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
+      matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)]; %=% dimmer might not be needed here
     %end
   else
     %if rebounds
@@ -317,6 +353,8 @@ if ~isPlayerEngaging
     %else
       matrixPlayer = FUN.GraphPlayerPositions(PlayerTargets,Ball.Pos,false,1,engagingPlayer);
       matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow .* matrixMoveOut;
+      %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
+      matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
     %end
   end
   [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
@@ -329,6 +367,7 @@ if ~isPlayerEngaging
     %-% instead of using Ball's position, use the position where the player will engage the ball.
     timeUntilContact = FUN.timeLeftInKick(FifoTemp,GameMode);
     engagePositionMatrix = FUN.BallPrediction(Ball.Pos,timeUntilContact,false);
+    %=% NB: these two lines can probably be replaced to improve speed; use "end" instead of "1" and no flip is needed
     engagePositionMatrix = flipud(engagePositionMatrix);
     engagePosition = engagePositionMatrix(1,:);
 
@@ -344,14 +383,22 @@ if ~isPlayerEngaging
     if firstCalculation
       if rebounds
         matrixKick = matrixFieldMir .* matrixShadow2 .* FUN.GraphMirror(matrixMoveOut);
+        %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
+        matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
       else
         matrixKick = matrixField .* matrixShadow2 .* matrixMoveOut;
+        %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
+        matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
       end
     else
       if rebounds
         matrixKick = max(matrixFieldMir,1-matrixPlayer) .* matrixShadow2 .* FUN.GraphMirror(matrixMoveOut);
+        %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
+        matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
       else
         matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut;
+        %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
+        matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
       end
     end
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
@@ -371,10 +418,14 @@ else
       matrixPlayer = FUN.GraphPlayerPositionsMir(PlayerFuture,engagePosition,false,1,engagingPlayer);
       matrixShadow2 = FUN.GraphShadowsMir(OpponentTargets, engagePosition, false, 2);
       matrixKick = max(matrixFieldMir,1-matrixPlayer) .* matrixShadow2 .* FUN.GraphMirror(matrixMoveOut);
+      %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
+      matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
     else
       matrixPlayer = FUN.GraphPlayerPositions(PlayerFuture,engagePosition,false,1,engagingPlayer);
       matrixShadow2 = FUN.GraphShadows(OpponentTargets, engagePosition, false, 2);
       matrixKick = max(matrixField,1-matrixPlayer) .* matrixShadow2 .* matrixMoveOut;
+      %=% in order to discourage passing to our side of the field, we will dim the part of the field behind the kicker
+      matrixKick = [matrixKick(:,1:floor(TeamOwn{engagingPlayer}.Pos(1)))*dimmer, matrixKick(:,floor(TeamOwn{engagingPlayer}.Pos(1))+1:end)];
     end
     [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixKick);
     yVal = yVal - FieldY; %-% This is because graphs cannot have negative indices, so the mirrored graphs are one field-height too high.
@@ -390,6 +441,18 @@ else
   end
 end
 
+%=% debugging display for dynamic kicking speed
+%=%disp('.');
+%=%disp('.');
+%=%disp('Ball speed output');
+%=%disp('Ball speed:');
+%=%disp(norm(Ball.Pos(3:4)));
+%=%disp('Attempted kick speed:');
+%=%disp(MinKickVel);
+%=%disp('canKick:');
+%=%disp(canKick);
+%=%ballSpeedLog = [ballSpeedLog; norm(Ball.Pos(3:4)), canKick];
+%=%disp(max(ballSpeedLog(:,1)));
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -426,7 +489,11 @@ if ~canKick
 
     %-% Tell player to intersect the ball and block it UNLESS the ball is headed toward the opposition's net.
     %-% NB: This should be improved.
-    if FUN.isBallGoingForGoal(Ball) && Ball.Pos(1) > FieldX/2
+    %=% if a player is blocking a shot and is within N cycles of contact with the ball, move over slightly
+    pointOfContact = BallPrediction(15,1:2);
+
+    %=% NB: the condition for making a player move out of the way might be able to use some improvement still. Players should be moved to an intelligent location.
+    if FUN.isBallGoingForGoal(Ball) && (norm(pointOfContact - TeamOwn{engagingPlayer}.Pos(1:2)) < 20) %=% Ball.Pos(1) > FieldX/2 <= Matt's
       xpos = FieldX.*0.9;
       if Ball.Pos(2) > TeamOwn{engagingPlayer}.Pos(2)
         ypos = FieldY.*0.1;
@@ -444,17 +511,17 @@ end
 PlayerTargets{engagingPlayer} = [];
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%-% Set up Ball and Player Prediction for the next 10 cycles %-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-% Set up Ball and Player Prediction for the next 'predictCycles' cycles %-%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %=% This establishes a prediction for the future state of the ball and any kicking player.
 %=% These values are used in the next HLS call to determine if a kick has been interrupted.
-BallPrediction = FUN.BallPrediction(Ball.Pos,10); 
+BallPrediction = FUN.BallPrediction(Ball.Pos,predictCycles); 
 %-% plan for the kicker's contact with the ball as well.
 if canKick
   timeUntilContact = FUN.timeLeftInKick(Fifo{engagingPlayer},GameMode);
-  if timeUntilContact <= 10
+  if timeUntilContact <= predictCycles
     %-% The purpose of this section is to correct BallPrediction to account for when our players kick the ball.
     engagePositionMatrix = FUN.BallPrediction(Ball.Pos,timeUntilContact,false);
     engagePositionMatrix = flipud(engagePositionMatrix);
@@ -467,7 +534,7 @@ if canKick
     %-% This doesn't make the velocities completely correctly, but it's okay because we don't check for them.
     targetVector = [-velx -vely];
     fakeBall.Pos = [engagePosition(1:2) targetVector];
-    reflectPre = FUN.BallPrediction(fakeBall.Pos,11-timeUntilContact);
+    reflectPre = FUN.BallPrediction(fakeBall.Pos,predictCycles+1-timeUntilContact);
     reflectPreSize = size(reflectPre);
     BallPrediction = [BallPrediction(1:(timeUntilContact-1),:);reflectPre(1:reflectPreSize(1),:)];
   end
