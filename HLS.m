@@ -432,7 +432,7 @@ end
 
 %-% Increase goalie winduptime delay
 %-% Get players' default positions to be closer to the center of the field.
-%-% Players need much bigger radiuses so that they don't go near eachother.
+%-% Players need much bigger radii so that they don't go near each other.
 %-% Current biggest folly: positioning.
  
 %-% If a player is going to kick the ball AND no opponent can get there first, THEN change state
