@@ -1,7 +1,7 @@
 function cycles = timeLeftInKick( PlayerFifo, GameMode )
 
 % It is assumed that this function will be called before the Fifo
-% gets modified by HLS. If a new Fifo is written or the current
+% gets modified by HLS. 
 
 global FUN
 
