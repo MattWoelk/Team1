@@ -1,0 +1,26 @@
+Master without rebounds:
+
+Anton10.16.2
+10-0
+AntonAltPassTri1
+10-0
+AntonAltPassTri2
+4-0
+AntonDemoPot
+4-1
+AntonDemoWin1
+1-0
+AntonDemoWin2
+3-0
+AntonFinal1
+2-1
+AntonFinal3
+4-1
+Kap1
+0-0 (but it's lame and freezes sometimes)
+KT1
+0-2
+Team_Gyuszi_060617_mod_by_Peat
+9-2
+Team_RandomPos+1touchKick
+10-0
