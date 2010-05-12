@@ -18,7 +18,6 @@ cycles = min(cycles, size(Fifo, 1));
 for i=1:cycles
   if Fifo(i, 2)   %=% we are moving forward
     %=% use the current angle vector to find x and y to add to position
-    %WRONG    PredictedCoordinates(i, :) = [ PlayerPos(1:2)*Fifo(i, 2), PlayerPos(3:4) ]
     MoveVector = PlayerPos(3:4) * Fifo(i, 2);
     NewPos = PlayerPos(1:2) + MoveVector;
     PredictedCoordinates(i, :) = [ NewPos, PlayerPos(3:4) ];
@@ -29,6 +28,7 @@ for i=1:cycles
     x = PlayerPos(3);
     y = PlayerPos(4);
 
+    %=% use of the atan2 function might make this code simpler
     if x > 0
       angle = atan(y/x);
     elseif x < 0 && y >=0
@@ -59,3 +59,10 @@ for i=1:cycles
     end
   end
 end
+
+
+% © 2010
+% Benjamin Bergman - ben.bergman@gmail.com
+% Matthew Woelk - umwoelk@cc.umanitoba.ca
+% This document is subject to the Creative Commons 3.0 Attribution Non-Commercial Share Alike license.
+% http://creativecommons.org/licenses/by-nc-sa/3.0/

@@ -83,3 +83,9 @@ if exist('displayOutput', 'var') && displayOutput
   line([BallPos(1) BallPos(1)],[BallPos(2) BallPos(2)],'Marker','o','Color','black');
   line([preX preX],[preY preY],'Marker','o','Color','blue');
 end
+
+% © 2010
+% Benjamin Bergman - ben.bergman@gmail.com
+% Matthew Woelk - umwoelk@cc.umanitoba.ca
+% This document is subject to the Creative Commons 3.0 Attribution Non-Commercial Share Alike license.
+% http://creativecommons.org/licenses/by-nc-sa/3.0/

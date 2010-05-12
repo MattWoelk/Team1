@@ -2,7 +2,7 @@ function [ xpos, ypos, cycles ] = PassIntersection ( PlayerPos, PlayerType, Play
 
 %PASSINTERSECTION Returns the position and number of cycles in the
 %  future where the provided player and ball can collide. This point
-%  is based on the provided Fifo of moved for the player and the 
+%  is based on the provided Fifo of moves for the player and the 
 %  speed of the ball. The offset is the time until we can kick the
 %  ball at the provided speed. The BallPos should be the position
 %  at that same kick time.
@@ -48,3 +48,10 @@ end
 xpos = -1;
 ypos = -1;
 cycles = inf;
+
+
+% © 2010
+% Benjamin Bergman - ben.bergman@gmail.com
+% Matthew Woelk - umwoelk@cc.umanitoba.ca
+% This document is subject to the Creative Commons 3.0 Attribution Non-Commercial Share Alike license.
+% http://creativecommons.org/licenses/by-nc-sa/3.0/

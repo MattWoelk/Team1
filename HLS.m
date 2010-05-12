@@ -1,10 +1,10 @@
-%function is responsible for high-level strategy. Receives all the
-%environment parameters and outputs the control signal
+%=% The HLS function is the High-Level Strategy.
+%=% This function receives all the environment parameters and returns the control signals for the team.
 
 function ControlSignal = HLS( TeamOwn, TeamOpp, Ball, GameMode, TeamCounter )
 global FUN Score
 global Environment Team M FieldX FieldY qDamp
-global BallTraj HLSTraj                         % is needed for drawing: the route of a ball and the robots planned trajektóriái [=.Target*]
+global BallTraj HLSTraj                         %=% These variables are used to draw the ball and players' trajectories 
 global CycleBatch
 
 %=% These are used for the tactical planner. 
@@ -44,8 +44,8 @@ CycleBatch = GameMode(4) + GameMode(5);
 qDamp  = 1-Environment.BallDampingFactor;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%           Initialisation and an alignment have it started               %
-%%%%%%%%%%%%%%%%(::  The filling of team data/assigning  ::)%%%%%%%%%%%%%%%
+%=%                      SIMULATION INITIALIZATION                      %=%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if GameMode(1) == 0
 
   Fifo = cell(1,M);
@@ -80,9 +80,9 @@ if GameMode(1) == 0
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%            RE-ALLOCATION [fixed-point situation]                        %
+%=%                      KICKOFF INITIALIZATION                         %=%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-if GameMode(2) == 2                     % 2:positioning manner of playing
+if GameMode(2) == 2                     
 
   TeamOwn = FUN.HLS_SetUp(TeamOwn);
   ControlSignal=cell(1,Team.NoofTeamMember);
@@ -119,8 +119,8 @@ end
 
 
 
-MinKickVel = 1.6; %-% These are currently nearly arbitrary.
-MaxKickVel = 2.6; %-% They represent the speed which all our kicks will be.
+%=% MinKickVel = 1.6; %-% These are currently nearly arbitrary.
+%=% MaxKickVel = 2.6; %-% They represent the speed which all our kicks will be.
 
 %=% 1.6 works decently but a dynamic choice for kick speed would allow greater versitility
 %=% TP_Kick (and thus canKick, our wrapper for it) will find the first working kick within a range, but it is slow and not necessarily the best kick speed
@@ -552,3 +552,22 @@ end
 %-%  - players will go toward the ball even when it means scoring on ourselves.
 %-%  - maybe have players run between the ball and the net when they're near our goal. (might be more difficult than it sounds)
 %-%  - maybe have players position themselves instead when ball's near our goal. (not a true fix)
+
+%-% Perhaps include a timeout for how long between passes the ball is still "in our control" (so that dumb teams won't affect us as much).
+%-% Using rebounds off of the sides of the field when determining how to shoot.
+
+%-% Increase goalie winduptime delay
+%-% Get players' default positions to be closer to the center of the field.
+%-% Players need much bigger radiuses so that they don't go near eachother.
+%-% Current biggest folly: positioning.
+ 
+%-% If a player is going to kick the ball AND no opponent can get there first, THEN change state
+
+
+
+
+% © 2010
+% Benjamin Bergman - ben.bergman@gmail.com
+% Matthew Woelk - umwoelk@cc.umanitoba.ca
+% This document is subject to the Creative Commons 3.0 Attribution Non-Commercial Share Alike license.
+% http://creativecommons.org/licenses/by-nc-sa/3.0/
