@@ -30,3 +30,9 @@ matrix = resultMatrix;
 %-% Make a few spots in the center of the net always bright white:
 matrix(FieldY/2+Environment.GoalSize/2 - 1:FieldY/2-Environment.GoalSize/2 + 1,FieldX) = 1;
 %-% The value 1 is the ball radius.
+
+% © 2010
+% Benjamin Bergman - ben.bergman@gmail.com
+% Matthew Woelk - umwoelk@cc.umanitoba.ca
+% This document is subject to the Creative Commons 3.0 Attribution Non-Commercial Share Alike license.
+% http://creativecommons.org/licenses/by-nc-sa/3.0/

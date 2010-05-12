@@ -46,3 +46,9 @@ if displayOutput
   line([btemp{2}(1) px(2)],[btemp{2}(2) py(2)],'Marker','o','Color',[0 1 0]);
   line([btemp{3}(1) px(3)],[btemp{3}(2) py(3)],'Marker','o','Color',[0 0 1]);
 end
+
+% © 2010
+% Benjamin Bergman - ben.bergman@gmail.com
+% Matthew Woelk - umwoelk@cc.umanitoba.ca
+% This document is subject to the Creative Commons 3.0 Attribution Non-Commercial Share Alike license.
+% http://creativecommons.org/licenses/by-nc-sa/3.0/

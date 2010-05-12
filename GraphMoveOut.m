@@ -14,3 +14,9 @@ distFromXAxis = repmat([1:FieldY-1]', 1, FieldX);
 distToMidOurGoal = sqrt((distFromYAxis).^2 + (distFromXAxis - FieldY/2).^2);
 matrix = min(ones(size(distToMidOurGoal)), distToMidOurGoal/25.0);
 
+
+% © 2010
+% Benjamin Bergman - ben.bergman@gmail.com
+% Matthew Woelk - umwoelk@cc.umanitoba.ca
+% This document is subject to the Creative Commons 3.0 Attribution Non-Commercial Share Alike license.
+% http://creativecommons.org/licenses/by-nc-sa/3.0/
