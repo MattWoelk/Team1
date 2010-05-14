@@ -424,9 +424,6 @@ else
       yVal = yVal - FieldY; %-% This is because graphs cannot have negative indices, so the mirrored graphs are one field-height too high.
     end
 
-    MinKickVel = 1.6; %-% These are currently nearly arbitrary.
-    MaxKickVel = 1.6;
-
     %-% This canKick is used to create the player's Fifo.
     [canKick, FifoTemp, BallTrajBackup, PlayerTrajBackup]=FUN.canKick(MinKickVel, MaxKickVel, TeamOwn{engagingPlayer}, [xVal,yVal], Ball.Pos, TeamCounter, engagingPlayer, GameMode);
     kickertarget = [xVal,yVal];
