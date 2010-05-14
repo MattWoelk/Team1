@@ -9,7 +9,7 @@ TeamOwn{agentIndex}.Target=[Target 0 0];
 [CS,TeamOwn{agentIndex}.Target,TeamOwn{agentIndex}.TargetSpeedTime]=...
     FUN.moveTo(agentIndex,TeamOwn,DesiredSpeedTime);
 
-FifoForPlayer = FUN.U_TimeStamp(CS, GameMode(1));  %add timestamps to controlsignals
+FifoForPlayer = FUN.U_TimeStamp(CS, GameMode(1));  %=% adds timestamps to controlsignals
 [ControlSignalForPlayer, FifoForPlayer] = ...
     FUN.U_Shorten(FifoForPlayer, GameMode(1), CycleBatch);
 

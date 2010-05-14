@@ -9,19 +9,6 @@ function inter = DistanceToLine2 (x1, y1, x2, y2, x3, y3, OnLineSegment) %inter 
 %-% made by oliii (GDNet+ Member)
 %-%   posted on 17/4/2007
 
-%-% Original code:
-%-%    Vector AP = P - A:
-%-%    Vector AB = B - A;
-%-%    float ab2 = AB.x*AB.x + AB.y*AB.y;
-%-%    float ap_ab = AP.x*AB.x + AP.y*AB.y;
-%-%    float t = ap_ab / ab2;
-%-%    if (segmentClamp)
-%-%    {
-%-%         if (t < 0.0f) t = 0.0f;
-%-%         else if (t > 1.0f) t = 1.0f;
-%-%    }
-%-%    Vector Closest = A + AB * t;
-%-%    return Closest;
 
 sizex = size(x1);
 sizey = size(y1);

@@ -1,6 +1,7 @@
 function matrix = BallPrediction(BallPos,cycles,displayOutput)
 
 %-% Predict where the ball will be "cycles" number of cycles in the future.
+%=% NB: possible future improvement: for easier debugging, the code repitition should be removed; all appropriate code should be in the loop.
 
 global qDamp FieldX FieldY
 

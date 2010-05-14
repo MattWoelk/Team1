@@ -1,4 +1,5 @@
 function matrix = GraphDimmer (PlayerPos, Dimmer)
+%=% Uses the Dimmer value to create a matrix that dims the field between the player and the player's goal.
 
 global FieldX FieldY
 

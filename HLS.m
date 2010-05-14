@@ -1,6 +1,11 @@
 %=% The HLS function is the High-Level Strategy.
 %=% This function receives all the environment parameters and returns the control signals for the team.
 
+
+% Comments starting with %=% were written by Benjamin Bergman
+% Comments starting with %=% were written by Matthew Woelk
+
+
 function ControlSignal = HLS( TeamOwn, TeamOpp, Ball, GameMode, TeamCounter )
 global FUN Score
 global Environment Team M FieldX FieldY qDamp
@@ -30,11 +35,10 @@ persistent matrixMoveOut  %-% A black semi-circle in our net.
 persistent matrixDontCamp %-% A black semi-circle in the opponent's net.
 persistent matrixPlayersGoStatic %-% A field matrix for movement calculations.
 persistent firstCalculation %-% so that the first kick calculation for each kick is to clear the ball.
-persistent rebounds %-% VERY IMPORTANT: This sets the ability for players to calculate rebound when taking shots. (slows down the game)
+persistent rebounds %-% VERY IMPORTANT: This sets the ability for players to calculate rebound when taking shots. (slows down the game when rebounds are on)
 persistent predictCycles %=% The number of cycles in the future we want to predict for the ball's position
 
 persistent dimmer %=% When discouraging backwards kicks, we multiple the field behind the kicker by this
-persistent ballSpeedLog
 
 
 
@@ -44,7 +48,7 @@ CycleBatch = GameMode(4) + GameMode(5);
 qDamp  = 1-Environment.BallDampingFactor;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%=%                      SIMULATION INITIALIZATION                      %=%
+%=%                     SIMULATION INITIALIZATION                       %=%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if GameMode(1) == 0
 
@@ -55,6 +59,7 @@ if GameMode(1) == 0
   qDampRec = 1 / qDamp;
   qDampMRec = 1 / (1 - qDamp);
   qDampLogRec = 1 / log(qDamp);
+
   %-% Initialize all our persistent variables
   isPlayerEngaging = false;
   engagingPlayer = 2;
@@ -70,13 +75,11 @@ if GameMode(1) == 0
   matrixSides = FUN.GraphSides();
   matrixPlayersGoStatic = (1-matrixField).*matrixMoveOut.*matrixSides;
   firstCalculation = true;
-  rebounds = false; %-% VERY IMPORTANT: This sets the ability for players to calculate rebounds when taking shots. (slows down the game)
+  rebounds = false; %-% VERY IMPORTANT: This sets the ability for players to calculate rebounds when taking shots. (slows down the game when rebounds are on)
 
-  %=% When discouraging backwards kicks, we multiple the field behind the kicker by this
+  %=% When discouraging backwards kicks, we multiply the field behind the kicker by this
   %=% the lower this number (between 0 and 1) the less likely we are to kick backwards
   dimmer = 0.9;
-
-  ballSpeedLog = zeros(0,2);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -116,13 +119,16 @@ end
 
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%=%                       BEGINNING OF STRATEGY                         %=%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
 %=% MinKickVel = 1.6; %-% These are currently nearly arbitrary.
-%=% MaxKickVel = 2.6; %-% They represent the speed which all our kicks will be.
+%=% MaxKickVel = 1.6; %-% They represent the speed which all our kicks will be.
 
-%=% 1.6 works decently but a dynamic choice for kick speed would allow greater versitility
+%=% 1.6 works decently but a dynamic choice for kick speed allows greater versatility
 %=% TP_Kick (and thus canKick, our wrapper for it) will find the first working kick within a range, but it is slow and not necessarily the best kick speed
 %=% we want to use the ball's current speed and use that to map a new kicking velocity on a different range
 
@@ -134,10 +140,6 @@ MaxKickVel = MidKickVel + RangeKickVel/2;
 
 
 
-
-
-
-
 for i = 1:M %-% This is just to format TeamOpp{i}.Pos to play nice with GraphShadows
   OpponentTargets{i} = TeamOpp{i}.Pos;
 end
@@ -146,6 +148,9 @@ if rebounds
   matrixShadowMir = FUN.GraphShadowsMir(OpponentTargets,Ball.Pos,false,1);
 end
 %-%FUN.DisplayMatrix(FUN.GraphShadowsMir(OpponentTargets,Ball.Pos,false,1),4);
+
+
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -160,7 +165,7 @@ safeDistanceAway = false;
 threshold = 0.8;
 %-% This ignores the different in the ball's velocity
 if norm(Ball.Pos(1:2) - BallPrediction(10,1:2)) > threshold
-  BallInterrupted = true; %-% An opponent (or a goalpost) has contacted the ball.
+  BallInterrupted = true; %-% An opponent or teammate (or a goalpost) has contacted the ball.
   firstCalculation = true;
 else
   BallInterrupted = false;
@@ -191,9 +196,6 @@ end
 
 
 
-
-
-
 %-% If someone is already engaging the ball, see if they're still being successful:
 if isPlayerEngaging
   if (~BallInterrupted && ~PlayerInterrupted)
@@ -207,6 +209,7 @@ if isPlayerEngaging
     hasPossession = false;
   end
 end
+
 
 
 
@@ -245,11 +248,6 @@ if ~isPlayerEngaging
     kickoff = false;
   end
 end
-
-
-
-
-
 
 
 if safeDistanceAway
@@ -291,8 +289,7 @@ else
       %-% NB: We should have players go between opponents if we want to intercept passes.
       matrixPlayerGo = FUN.GraphShadowsStatic(TeamOwn,inc,false,1);
       matrixGoN = matrixPlayersGoStatic.*matrixPlayerGo.*matrixDontCamp;
-      %---------%if FUN.isBallGoingForGoal(Ball)
-      [highPoint,xVal,yVal] = FUN.FindHighestValue(matrixGoN);
+      [highPoint,xVal,yVal rMBKu= FUN.FindHighestValue(matrixGoN);
 
       %-% Send player to highPoint (coord: xVal, yVal)
       garbage = []; %-% Do not use the Fifo that GoHere gives us.
@@ -432,18 +429,6 @@ else
   end
 end
 
-%=% debugging display for dynamic kicking speed
-%=%disp('.');
-%=%disp('.');
-%=%disp('Ball speed output');
-%=%disp('Ball speed:');
-%=%disp(norm(Ball.Pos(3:4)));
-%=%disp('Attempted kick speed:');
-%=%disp(MinKickVel);
-%=%disp('canKick:');
-%=%disp(canKick);
-%=%ballSpeedLog = [ballSpeedLog; norm(Ball.Pos(3:4)), canKick];
-%=%disp(max(ballSpeedLog(:,1)));
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -454,7 +439,6 @@ end
 if canKick
   firstCalculation = false;
   [ControlSignal{engagingPlayer}, Fifo{engagingPlayer}] = FUN.Kick( FifoTemp, TeamCounter, engagingPlayer, GameMode );
-  %-% NB: Change State????(set state?)
 end
 if ~canKick
   %-% Tell the goalie to move to an ideal spot on the field
@@ -479,12 +463,11 @@ if ~canKick
     BallTraj{TeamCounter} = [-1 -1];
 
     %-% Tell player to intersect the ball and block it UNLESS the ball is headed toward the opposition's net.
-    %-% NB: This should be improved.
     %=% if a player is blocking a shot and is within N cycles of contact with the ball, move over slightly
     pointOfContact = BallPrediction(15,1:2);
 
     %=% NB: the condition for making a player move out of the way might be able to use some improvement still. Players should be moved to an intelligent location.
-    if FUN.isBallGoingForGoal(Ball) && (norm(pointOfContact - TeamOwn{engagingPlayer}.Pos(1:2)) < 20) %=% Ball.Pos(1) > FieldX/2 <= Matt's
+    if FUN.isBallGoingForGoal(Ball) && (norm(pointOfContact - TeamOwn{engagingPlayer}.Pos(1:2)) < 20) 
       xpos = FieldX.*0.9;
       if Ball.Pos(2) > TeamOwn{engagingPlayer}.Pos(2)
         ypos = FieldY.*0.1;
@@ -496,10 +479,14 @@ if ~canKick
     end
     garbage = []; %-% Do not use the Fifo that GoHere gives us.
     [ControlSignal{engagingPlayer}, garbage] = FUN.GoHere(engagingPlayer, [xpos,ypos],TeamOwn, GameMode, CycleBatch, TeamCounter);
-    %-% NB: Change State????(set state?)
   end
 end
 PlayerTargets{engagingPlayer} = [];
+
+
+
+
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -536,6 +523,9 @@ for i=1:M
 end
 
 
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %-% Notes for possible further improvements %-%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -559,6 +549,8 @@ end
 %-% Current biggest folly: positioning.
  
 %-% If a player is going to kick the ball AND no opponent can get there first, THEN change state
+
+
 
 
 

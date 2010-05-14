@@ -26,8 +26,6 @@ for i = 1:M
     if locations{i} < 0
       locations{i} = PlayerTargets{i};
     end
-    %disp(strcat('locations | ',num2str(i),' | ',num2str(locations{i})));
-    %disp(strcat('targetsss | ',num2str(i),' | ',num2str(PlayerTargets{i})));
   else
     locations{i} = [];
   end

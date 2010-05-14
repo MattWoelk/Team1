@@ -28,6 +28,7 @@ for i=1:cycles
     x = PlayerPos(3);
     y = PlayerPos(4);
 
+    %=% adapted from wikipedia's polar coordinates article
     %=% use of the atan2 function might make this code simpler
     if x > 0
       angle = atan(y/x);

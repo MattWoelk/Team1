@@ -1,8 +1,8 @@
 function canGetThereFirst = canGetThereFirst(TeamOpp,PlayerPos,PlayerType,BallPos,offset)
 
-%-% This function calculates whether out player will be able to get to the ball before any opponent.
+%-% This function calculates whether our player will be able to get to the ball before any opponent.
 %-% offset: roughly how long it takes to set up a shot. (17 seems like a good choice)
-%=% NB: this offset is an approximation. If the ball is moving quickly, this approximation will fail. This might be better to incorporate with the Intersection function.
+%=% NB: this offset is an approximation. If the ball is moving quickly, this approximation may fail. This might be better to incorporate with the Intersection function.
 
 global FUN M
 

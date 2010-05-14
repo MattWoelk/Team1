@@ -18,7 +18,6 @@ distFromSide = min(distFromSide,fandle(FieldX - distFromYAxis));
 matrix = min(1,distFromSide);
 matrix = max(0,distFromSide);
 
-%-% 0.9 - 1/(x+0.8)
 
 % © 2010
 % Benjamin Bergman - ben.bergman@gmail.com
