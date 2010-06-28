@@ -75,7 +75,7 @@ if GameMode(1) == 0
   matrixSides = FUN.GraphSides();
   matrixPlayersGoStatic = (1-matrixField).*matrixMoveOut.*matrixSides;
   firstCalculation = true;
-  rebounds = false; %-% VERY IMPORTANT: This sets the ability for players to calculate rebounds when taking shots. (slows down the game when rebounds are on)
+  rebounds = true; %-% VERY IMPORTANT: This sets the ability for players to calculate rebounds when taking shots. (slows down the game when rebounds are on)
 
   %=% When discouraging backwards kicks, we multiply the field behind the kicker by this
   %=% the lower this number (between 0 and 1) the less likely we are to kick backwards
@@ -289,7 +289,7 @@ else
       %-% NB: We should have players go between opponents if we want to intercept passes.
       matrixPlayerGo = FUN.GraphShadowsStatic(TeamOwn,inc,false,1);
       matrixGoN = matrixPlayersGoStatic.*matrixPlayerGo.*matrixDontCamp;
-      [highPoint,xVal,yVal rMBKu= FUN.FindHighestValue(matrixGoN);
+      [highPoint,xVal,yVal]= FUN.FindHighestValue(matrixGoN);
 
       %-% Send player to highPoint (coord: xVal, yVal)
       garbage = []; %-% Do not use the Fifo that GoHere gives us.
